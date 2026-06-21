@@ -34,5 +34,4 @@
     # Use Google Vertex AI with OIDC authentication instead of direct Anthropic API
     use_vertex: # optional, default is false
     # Whether to use Node.js dependency caching (set to true only for Node.js projects with lock files)
-    use_node_cache: # optional, default is false
-          
+    use_node_cache: # optional, default is false          
