@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synoptica — Every event, every angle</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+  :root{
+    --ink:#1a1a1a;--paper:#faf8f3;--paper-dim:#f1ede3;
+    --friction:#b8472f;--cooperation:#2d5f5d;--rule:#d8d2c2;--gray:#6b6759;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;line-height:1.55;}
+  .wrap{max-width:880px;margin:0 auto;padding:0 24px 120px;}
+
+  .masthead{border-bottom:3px solid var(--ink);padding:30px 0 18px;}
+  .masthead-row{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray);margin-bottom:16px;}
+  h1{font-family:'Source Serif 4',serif;font-size:38px;line-height:1.05;font-weight:700;margin:0 0 10px;letter-spacing:-0.01em;}
+  .dek{font-family:'Source Serif 4',serif;font-style:italic;font-size:17px;color:#3a3730;margin:0;max-width:660px;}
+
+  /* SEARCH */
+  .searchbox{margin:28px 0 8px;}
+  .search-row{display:flex;gap:0;border:2px solid var(--ink);}
+  .search-row input{flex:1;border:none;padding:15px 16px;font-family:'Source Serif 4',serif;font-size:17px;background:var(--paper);color:var(--ink);}
+  .search-row input:focus{outline:none;background:#fff;}
+  .search-row button{border:none;background:var(--ink);color:var(--paper);padding:0 24px;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;}
+  .search-row button:hover{background:#000;}
+  .search-row button:disabled{background:var(--gray);cursor:wait;}
+  .suggest{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap;}
+  .suggest label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);}
+  .suggest select{padding:7px 10px;border:1px solid var(--rule);background:var(--paper);font-family:'Inter',sans-serif;font-size:13px;color:var(--ink);}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+  .chip{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 11px;border:1px solid var(--rule);background:var(--paper);cursor:pointer;color:var(--gray);}
+  .chip:hover{border-color:var(--ink);color:var(--ink);}
+
+  /* mode toggle */
+  .mode-row{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap;}
+  .mode-label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);}
+  .modeseg{display:inline-flex;border:1px solid var(--ink);}
+  .seg{border:none;background:var(--paper);color:var(--gray);font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:7px 13px;cursor:pointer;letter-spacing:.02em;}
+  .seg+.seg{border-left:1px solid var(--ink);}
+  .seg.active{background:var(--ink);color:var(--paper);}
+  .mode-hint{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gray);}
+
+  /* discovery */
+  .discover{margin-top:20px;border-top:1px solid var(--rule);padding-top:14px;}
+  .disc-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:space-between;}
+  .disc-title{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--friction);font-weight:600;}
+  .cat-tabs{display:flex;gap:4px;flex-wrap:wrap;}
+  .cat-tab{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:4px 9px;border:1px solid var(--rule);background:var(--paper);cursor:pointer;color:var(--gray);}
+  .cat-tab:hover{border-color:var(--ink);color:var(--ink);}
+  .cat-tab.active{background:var(--paper-dim);border-color:var(--ink);color:var(--ink);}
+
+  /* results toolbar */
+  .restools{display:flex;gap:8px;margin:0 0 6px;flex-wrap:wrap;}
+  .tool-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 12px;border:1px solid var(--rule);background:var(--paper);cursor:pointer;color:var(--ink);display:inline-flex;align-items:center;gap:6px;}
+  .tool-btn:hover{border-color:var(--ink);background:var(--paper-dim);}
+  .tool-btn.done{border-color:var(--cooperation);color:var(--cooperation);}
+  .mode-badge{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;background:var(--paper-dim);color:var(--gray);margin-left:auto;align-self:center;}
+
+  /* STATUS */
+  .status{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gray);padding:40px 0;text-align:center;}
+  .status .pulse{display:inline-block;width:8px;height:8px;background:var(--friction);border-radius:50%;margin-right:8px;animation:p 1s infinite;}
+  @keyframes p{0%,100%{opacity:.3}50%{opacity:1}}
+  .loadwrap{padding:48px 0;text-align:center;}
+  .loadwrap svg{width:200px;height:150px;display:block;margin:0 auto 18px;}
+  .loadcap{font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.04em;color:var(--gray);}
+  .loadcap b{color:var(--ink);font-weight:600;}
+  .loadcap .dots::after{content:'';animation:dots 1.4s steps(4,end) infinite;}
+  @keyframes dots{0%{content:''}25%{content:'·'}50%{content:'··'}75%{content:'···'}100%{content:''}}
+  .err{border-left:3px solid var(--friction);background:#fbeae6;padding:14px 16px;font-size:14px;margin:24px 0;}
+
+  /* RESULT */
+  .section-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gray);border-top:1px solid var(--rule);padding-top:8px;margin:44px 0 18px;display:flex;justify-content:space-between;}
+  .res-kicker{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--friction);font-weight:600;margin:40px 0 8px;}
+  .res-title{font-family:'Source Serif 4',serif;font-size:30px;font-weight:700;margin:0 0 12px;line-height:1.1;}
+  .res-summary{font-size:17px;color:#3a3730;margin:0 0 8px;}
+  .caveat{border-left:3px solid var(--ink);background:var(--paper-dim);padding:12px 14px;font-size:14px;margin:18px 0;}
+  .caveat b{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:3px;color:var(--gray);}
+  .whynow{border-left:3px solid var(--friction);background:#fbeae6;padding:12px 14px;font-size:15px;margin:14px 0;}
+  .whynow b{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:3px;color:var(--friction);}
+  .crux{border:1px solid var(--ink);padding:12px 14px;font-size:14.5px;margin:4px 0 16px;}
+  .crux b{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:3px;color:var(--ink);}
+  .frag-verdict{background:#fbeae6;border:1px solid var(--friction);padding:10px 14px;font-size:15px;font-weight:600;margin:4px 0 12px;}
+  .frag-verdict b{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:2px;color:var(--friction);font-weight:600;}
+  .spoiler{border-left:3px solid var(--friction);padding:8px 0 8px 14px;margin-bottom:12px;}
+  .sp-actor{font-weight:600;font-size:14.5px;}
+  .sp-why{font-size:14px;color:#3a3730;margin:3px 0;}
+  .sp-cap{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gray);}
+  .sp-cap b{color:var(--ink);}
+  .frag-line{border-left:3px solid var(--ink);padding:8px 0 8px 14px;margin:10px 0;font-size:14px;}
+  .frag-line.counter{border-left-color:var(--cooperation);}
+  .frag-line b{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:2px;color:var(--gray);}
+
+  .lens{border:1px solid var(--ink);margin:12px 0;padding:16px;}
+  .lens-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .lens-code{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--friction);font-weight:600;}
+  .lens-name{font-weight:600;font-size:16px;margin:2px 0 0;}
+  .lens-conf{font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;padding:3px 9px;white-space:nowrap;}
+  .lens-conf.High{background:#fbeae6;color:var(--friction);}
+  .lens-conf.Guarded{background:var(--paper-dim);color:var(--gray);}
+  .lens-conf.Speculative{background:#e4efed;color:var(--cooperation);}
+  .lens-read{font-size:14.5px;color:#3a3730;margin:10px 0;}
+  .lens-ind{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gray);}
+  .lens-ind span{color:var(--ink);}
+
+  .timeline{position:relative;padding-left:26px;}
+  .timeline::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:1px;background:var(--rule);}
+  .tl-item{position:relative;margin-bottom:18px;}
+  .tl-item::before{content:"";position:absolute;left:-26px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--paper);border:2px solid var(--ink);}
+  .tl-date{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--friction);font-weight:600;}
+  .tl-text{margin:2px 0 0;font-size:14.5px;}
+
+  .conn{border-left:3px solid var(--cooperation);padding:8px 0 8px 14px;margin-bottom:12px;}
+  .conn-ev{font-weight:600;font-size:14.5px;}
+  .conn-link{font-size:13.5px;color:#3a3730;margin-top:2px;}
+
+  .out{border:1px solid var(--rule);padding:14px;margin-bottom:10px;}
+  .out-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .out-scn{font-weight:600;font-size:15px;}
+  .out-like{font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;color:var(--gray);white-space:nowrap;}
+  .out-watch{font-size:13.5px;color:#3a3730;margin-top:6px;}
+  .out-watch b{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--gray);}
+
+  .sources{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gray);line-height:2;}
+
+  /* perspectives ledger */
+  .ledger{display:grid;grid-template-columns:1fr 1px 1fr;gap:0;margin:8px 0 4px;}
+  .ledger-col{padding:0 22px;}
+  .ledger-col:first-child{padding-left:0;}
+  .ledger-col:last-child{padding-right:0;}
+  .ledger-rule{background:var(--rule);}
+  .ledger-head{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--ink);}
+  .ledger-head.for{color:var(--friction);}
+  .ledger-head.against{color:var(--cooperation);}
+  .stance{margin-bottom:16px;}
+  .stance-who{font-weight:600;font-size:14px;margin-bottom:3px;}
+  .stance-text{font-size:14px;color:#3a3730;margin:0;}
+  @media(max-width:640px){.ledger{grid-template-columns:1fr;}.ledger-rule{display:none;}.ledger-col{padding:0;margin-bottom:24px;}}
+
+  /* clickable source links */
+  .srclist{display:flex;flex-direction:column;border:1px solid var(--rule);}
+  .srcitem{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:11px 14px;border-bottom:1px solid var(--rule);text-decoration:none;color:var(--ink);}
+  .srcitem:last-child{border-bottom:none;}
+  .srcitem:hover{background:var(--paper-dim);}
+  .srcleft{display:flex;align-items:baseline;gap:10px;min-width:0;}
+  .srctitle{font-size:14px;line-height:1.35;}
+  .srchost{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--cooperation);white-space:nowrap;}
+  .tierkey{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--gray);margin:0 0 10px;line-height:1.7;}
+  .tier{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;font-weight:600;white-space:nowrap;display:inline-block;}
+  .tier.primary{background:var(--cooperation);color:var(--paper);}
+  .tier.reporting{background:var(--paper-dim);color:var(--ink);border:1px solid var(--rule);}
+  .tier.analysis{background:none;color:var(--friction);border:1px solid var(--friction);}
+  .tier.reference{background:none;color:var(--gray);border:1px dashed var(--gray);}
+  .tier.other{background:none;color:var(--gray);border:1px solid var(--rule);}
+  .raw{white-space:pre-wrap;font-family:'IBM Plex Mono',monospace;font-size:13px;background:var(--paper-dim);padding:16px;border:1px solid var(--rule);line-height:1.6;}
+  .disclaimer{margin-top:48px;padding-top:18px;border-top:1px solid var(--rule);font-size:12px;color:var(--gray);font-family:'IBM Plex Mono',monospace;line-height:1.7;}
+  .wordmark{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px;}
+  .wordmark .name{font-family:'Source Serif 4',serif;font-weight:700;font-size:30px;letter-spacing:.02em;color:var(--ink);line-height:1;}
+  .wordmark .name .dot{color:var(--friction);}
+  .wordmark .tag{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gray);}
+  .how-link{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--cooperation);cursor:pointer;}
+  .how-link:hover{color:var(--ink);}
+  .howpanel{max-height:0;overflow:hidden;transition:max-height .35s ease;border-left:2px solid var(--rule);margin-top:0;}
+  .howpanel.open{max-height:900px;margin-top:16px;}
+  .how-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 26px;padding:14px 0 4px 16px;}
+  @media(max-width:640px){.how-grid{grid-template-columns:1fr;}}
+  .how-h{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--friction);font-weight:600;display:block;margin-bottom:5px;}
+  .how-grid p{font-size:13.5px;color:#3a3730;margin:0;line-height:1.5;}
+  .gen-stamp{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gray);margin:2px 0 14px;}
+  .thin-note{border-left:3px solid var(--friction);background:#fbeae6;padding:10px 13px;font-size:13.5px;margin:0 0 16px;}
+  .stateflag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;background:var(--friction);color:var(--paper);font-weight:600;white-space:nowrap;}
+  .err-actions{display:flex;gap:8px;margin:12px 0 6px;}
+  .err-detail{display:block;margin-top:8px;color:var(--gray);font-family:'IBM Plex Mono',monospace;font-size:11px;opacity:.8;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="masthead">
+    <div class="wordmark">
+      <span class="name">Synoptica<span class="dot">.</span></span>
+      <span class="tag">Every event, every angle</span>
+    </div>
+    <div class="masthead-row"><span>Event Deep-Dive Engine</span><span><a class="how-link" onclick="toggleHow()">How this works ▾</a></span></div>
+    <h1>Search any global event.</h1>
+    <p class="dek">Type a conflict, policy, market move, or geopolitical shift. The engine pulls current sources and reads it through four lenses — financial, military, technological, and geopolitical shifts — then maps its history, connections, and plausible futures.</p>
+    <div class="howpanel" id="howpanel">
+      <div class="how-grid">
+        <div><span class="how-h">The four lenses</span><p>Every event is read through up to four frames — <b>Financial</b> (who profits, capital flows), <b>Military</b> (spending, contracts, arms), <b>Technological</b> (surveillance, data, dual-use), and <b>Geopolitical</b> (alliances, leverage, sovereignty). Only the ones that genuinely fit are shown, each with a confidence rating.</p></div>
+        <div><span class="how-h">The sourcing</span><p>Each deep-dive runs several searches from different angles — the event, the opposing case, the money trail, and non-Western coverage — then lists the real links it read, tiered by type: <b>primary</b> (official/data), <b>reporting</b>, <b>analysis</b> (think tanks), and <b>reference</b>. State-controlled outlets are flagged. Encyclopedias are a lead, not proof.</p></div>
+        <div><span class="how-h">Both sides, you decide</span><p>It surfaces the strongest case for and against, names the empirical crux they actually disagree about, and — for deals — assesses how fragile it is. It does not hand down a verdict. Contested legal claims appear only as attributed allegations, never as asserted fact.</p></div>
+        <div><span class="how-h">The honest limits</span><p>This is AI-generated and grounded in live web search. It can be wrong, out of date, or miss a source — confident wrong figures are the hardest to catch. Treat every claim as a lead to verify against the listed sources. Quick read is faster and lighter; Deep dive is the full analysis.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="searchbox">
+    <div class="search-row">
+      <input id="q" type="text" placeholder="e.g. EU defense spending surge, or Niger coup, or undersea cable sabotage" />
+      <button id="go" onclick="runSearch()">Deep dive →</button>
+    </div>
+
+    <div class="mode-row">
+      <span class="mode-label">Mode:</span>
+      <div class="modeseg" id="modeseg">
+        <button class="seg" data-mode="quick" onclick="setMode('quick')">⚡ Quick read</button>
+        <button class="seg active" data-mode="deep" onclick="setMode('deep')">⌖ Deep dive</button>
+      </div>
+      <span class="mode-hint" id="modeHint">Full multi-angle analysis · 20–60s</span>
+    </div>
+
+    <div class="discover">
+      <div class="disc-head">
+        <span class="disc-title" id="discTitle">Trending now</span>
+        <div class="cat-tabs" id="catTabs"></div>
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+  </div>
+
+  <div id="out"></div>
+
+  <div class="disclaimer">
+    PROTOTYPE — analysis is AI-generated and grounded in live web search, but can be wrong, incomplete, or out of date. Treat every claim as a lead to verify against the primary sources listed, not as fact. This is an analytical lens, not a verdict.
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   CONFIG — feature flags.
+   ACTIVE now (small-group / personal use). The DORMANT block stays OFF until
+   public launch; most of those only become *real* once a backend exists,
+   because a frontend file has no shared server, no cross-user store, and no
+   trustworthy way to enforce limits. They're scaffolded here so the backend
+   has obvious sockets to plug into.
+   ============================================================================ */
+const CONFIG = {
+  // ---- ACTIVE ----
+  multiAngle: true,          // fire several targeted searches and synthesize across them
+  searchAngles: 4,           // event · opposing case · money trail · non-Western coverage
+
+  // ---- DORMANT (turn on before public launch) ----
+  enforceSearchCap: false,   // hard ceiling on web searches as a cost control (REAL now via API max_uses)
+  maxSearchesWhenCapped: 4,  // ceiling when the cap is on
+
+  caching: false,            // serve a stored result for a repeat event instead of paying to regenerate.
+                             // Demo cache here is in-memory & per-browser only; the REAL shared,
+                             // cross-user cache lives in the backend (e.g. KV store / Redis).
+
+  rateLimit: false,          // throttle per user so one person/bot can't run up the bill.
+  rateLimitPerHour: 12,      // client-side check here is bypassable — REAL enforcement is server-side.
+
+  requireSignIn: false       // tie usage to accounts before public. REAL gate is server-side auth.
+};
+
+// In-memory demo cache (resets on reload). Backend replaces with a shared store.
+const _cache = new Map();
+// In-memory request timestamps for the rate-limit demo. Backend replaces with per-user/IP store.
+let _reqTimes = [];
+
+const SYSTEM = `You are a rigorous geopolitical-economy analyst. A user gives you a world event. You analyze it through four "complex" lenses and return a structured deep-dive.
+
+SEARCH STRATEGY — when grounding with web search, do NOT run a single generic search. Run several DISTINCT searches from different angles, then synthesize across all of them:
+1. The core event — latest verified facts, dates, figures.
+2. The OPPOSING / critical case — who objects and why; risks, downsides, dissenting analysis.
+3. The money trail — who profits, capital flows, contracts, financial winners and losers.
+4. NON-WESTERN / regional coverage — deliberately seek how outlets outside the US/UK frame it (e.g. regional, Global South, or local-language sources in translation), to counter the default Western-source skew.
+Pull from a SPREAD of source types: official/primary data, mainstream journalism, and at least one non-Western outlet where relevant. If sources conflict, say so rather than averaging them away.
+
+The four lenses (apply only those that genuinely fit; you may use 2-4):
+- FIC = Financial-Industrial Complex (capital flows, debt vs equity, conditionality, who profits financially)
+- MIC = Military-Industrial Complex (defense spending, contracts, theater shifts, who arms whom)
+- TIC = Technology-Industrial Complex (surveillance, data, platform power, dual-use tech)
+- GEO = State power / diplomacy (alliances, leverage, sovereignty, regional balance)
+
+DEPTH REQUIREMENTS — this is what separates a real analysis from a summary. Every section must clear these bars:
+
+- SPECIFIC, NOT GENERIC. Never write "this could affect markets/spending." Name the concrete channel, the actor, and a figure: which company, which budget line, which country, which number to watch, and roughly how big. "Pushes German air-defense procurement, so Rheinmetall's order backlog is the tell" — not "affects defense."
+- EXPLAIN, DON'T RESTATE. Don't just say what happened. Answer who / what / when / where — and then the hard ones: WHY it happened, HOW the mechanism actually works, and especially WHY NOW (the specific trigger or deadline that made it happen at this moment rather than a year ago or a year from now).
+- HISTORY AS A CAUSAL CHAIN. The history must be a throughline, not a date list. Each step should make the NEXT one possible — show the causal link ("X removed the obstacle to Y", "Z created the incentive for…"). If two events are merely adjacent in time with no causal link, don't imply one.
+- REAL TENSION, NOT BOTH-SIDES-ISM. For perspectives, give each side's STRONGEST good-faith case (steelman, never strawman) AND identify the single empirical question they actually disagree about — the "crux" — the thing where, if you knew the answer, one side would be right. Not "they have different values" but "they disagree about whether X will actually cause Y."
+- DOCUMENTED vs INFERRED. Mark which claims are documented (official statement, filing, hard data) versus inferred (your reading of incentives). Confidence ratings must reflect this: High = documented; Guarded = reasonable inference; Speculative = plausible but thin. The caveat must state plainly what evidence would prove the dominant reading WRONG.
+- METRIC DISCIPLINE — label every number with WHAT it measures, and never conflate different metrics. Share price, market cap, and total shareholder return are NOT revenue; revenue is NOT profit; order backlog is NOT sales; a percentage change is NOT a level. These move at wildly different magnitudes — a defense firm's stock can rise 300% while its revenue rises 70%, so calling a stock move "revenue growth" is a serious error. State the metric, the unit, the period, and the base year for any figure (e.g. "revenue rose from €5.7bn (2021) to €9.9bn (2025), +75%"). When citing a growth figure, be explicit whether it is an aggregate/total across firms or a single firm, and whether it is a simple average or weighted — mixing per-firm extremes with a group average produces contradictions. If you are not confident a number is the metric you're claiming, say so or omit it rather than guess.
+- CHRONOLOGY CLARITY — never let a timeline jump be ambiguous. When events span more than one calendar year, restate the YEAR at every step (don't write "April 12" when a later item is in a different year). A semicolon or "then" must never carry a multi-month or cross-year leap — make the gap explicit ("...collapsed in June 2025. A year later, in June 2026, ..."). If significant time or a major intervening event (e.g. a war) falls between two steps, say so rather than eliding it.
+- DEAL FRAGILITY / SPOILER RISK — when the event is a deal, ceasefire, MOU, treaty, or negotiation, you MUST assess how durable it is, not just describe it. Name the specific actors with the incentive AND capability to break it; cite their TRACK RECORD as documented fact (prior breaches, strikes, stated intentions, occupied territory) with attribution; and state what would actually cause collapse. Then give the counter-position fairly (why those actors say their conduct is justified or why the deal may hold). Report contested legal characterizations (e.g. "war crimes", "aggression") only as ATTRIBUTED allegations by named bodies or parties — never as the engine's own asserted fact. The point is a sourced, verifiable fragility assessment a skeptical reader of any persuasion will trust — strong facts with attribution, not loaded adjectives.
+
+The four lenses (apply only those that genuinely fit; you may use 2-4):
+- FIC = Financial-Industrial Complex (capital flows, debt vs equity, conditionality, who profits financially)
+- MIC = Military-Industrial Complex (defense spending, contracts, theater shifts, who arms whom)
+- TIC = Technology-Industrial Complex (surveillance, data, platform power, dual-use tech)
+- GEO = State power / diplomacy (alliances, leverage, sovereignty, regional balance)
+
+EPISTEMIC RULES — follow strictly:
+- Favor OPPORTUNISM over COORDINATION. Institutions follow openings; do not assert secret central planning.
+- No conspiracy theories. Confirmed strategy stated by officials or reported by credible outlets is fine; manufactured-pretext claims must be flagged Speculative.
+- Note where coverage conflicts across regions or where one side's framing dominates the available sources.
+
+Use web search to ground current facts. Then respond with ONLY a JSON object (no markdown, no preamble, no code fences, no citation brackets like [1], no text before or after the object) in EXACTLY this shape:
+{
+ "event":"normalized short title",
+ "summary":"1-2 neutral sentences on what happened (who/what/when/where)",
+ "whyNow":"the specific trigger, deadline, or change that made this happen at THIS moment — 1-2 sentences naming the precipitating cause",
+ "lenses":[{"code":"FIC|MIC|TIC|GEO","name":"short lens name for this event","confidence":"High|Guarded|Speculative","reading":"2-4 sentences naming the concrete mechanism, the actor(s), and a figure/number where possible","indicators":["specific number or event to watch","another"]}],
+ "perspectives":{"crux":"the single empirical question the two sides actually disagree about — if answered, one side is right","proponents":[{"who":"specific actor category","argument":"their strongest case with a concrete reason, 1-2 sentences"}],"critics":[{"who":"specific actor category","argument":"their strongest objection with a concrete reason, 1-2 sentences"}]},
+ "history":[{"date":"approx date or period","text":"what happened AND what it caused/enabled next — show the causal link"}],
+ "fragility":{"verdict":"how durable, e.g. 'Highly fragile' / 'Holding but contested' / 'N/A — not a deal'","spoilers":[{"actor":"who can break it","why":"their incentive + documented track record, with attribution","capability":"what they can actually do"}],"collapseTrigger":"the specific event that would most likely cause collapse","counterview":"why it might hold, or why a named spoiler says its conduct is justified"},
+ "connected":[{"event":"related event","link":"the specific causal or structural connection, not just 'related'"}],
+ "outcomes":[{"scenario":"plausible future with its mechanism","likelihood":"more likely|even|less likely","watch":"the specific signal that would confirm this path"}],
+ "sources":["primary sources to verify against, e.g. SIPRI, IMF WEO, World Bank IDS, AidData, USAspending.gov, official filings"],
+ "caveat":"the key uncertainty, and PLAINLY what evidence would prove the dominant reading wrong"
+}
+Aim for 2-3 lenses, 4-6 history items forming a clear chain, 2-3 connected, 2-3 outcomes. Include "fragility" ONLY when the event is a deal/ceasefire/treaty/negotiation; otherwise set fragility to null. Be dense and specific rather than long-winded — every sentence should carry a fact, a mechanism, or a number.`;
+
+/* ---- discovery: trending pool + browsable categories ----
+   NOTE: these are a CURATED, hardcoded set, not a live feed. Real "trending"
+   needs the backend to pull a news/markets API and rank what's actually moving.
+   Until then, the Trending row just shuffles this pool so it feels fresh. */
+const CATEGORIES = {
+  'Trending now': [
+    'EU joint defense borrowing and the SAFE facility',
+    'US Section 301 forced-labor tariffs on 60 countries',
+    'China rare-earth export controls',
+    'Undersea cable sabotage in the Baltic',
+    "Russia's Africa Corps and the Sahel coups",
+    'NATO 5% of GDP defense spending target',
+    'Iran nuclear talks and sanctions relief',
+    'AI chip export controls and Nvidia',
+    'Red Sea shipping disruption and Houthi attacks',
+    'Argentina IMF program under Milei',
+    'Taiwan semiconductor tensions',
+    'Critical minerals competition in DR Congo'
+  ],
+  'Conflict & defense': [
+    'NATO 5% of GDP defense spending target',
+    'EU joint defense borrowing and the SAFE facility',
+    'Ukraine long-range strike policy shifts',
+    'Rheinmetall capacity expansion across Europe'
+  ],
+  'Trade & tariffs': [
+    'US Section 301 forced-labor tariffs on 60 countries',
+    'EU-China EV tariff dispute',
+    'USMCA renegotiation pressures',
+    'Semiconductor export-control escalation'
+  ],
+  'Debt & capital': [
+    'Argentina IMF program under Milei',
+    'African sovereign debt distress and the IMF',
+    'China overseas lending slowdown',
+    'Sri Lanka / Zambia debt restructuring'
+  ],
+  'Surveillance & tech': [
+    'UK Online Safety Act enforcement',
+    'EU AI Act implementation',
+    'Facial recognition expansion during protests',
+    'Undersea cable security and sabotage'
+  ],
+  'Resources & minerals': [
+    'China rare-earth export controls',
+    'Critical minerals competition in DR Congo',
+    'Lithium nationalization in Latin America',
+    'Gulf states and the global energy transition'
+  ]
+};
+
+let MODE = 'deep';          // 'deep' | 'quick'
+let activeCat = 'Trending now';
+
+function setMode(m){
+  MODE = m;
+  document.querySelectorAll('#modeseg .seg').forEach(s=>s.classList.toggle('active', s.dataset.mode===m));
+  document.getElementById('go').textContent = (m==='quick'?'Quick read →':'Deep dive →');
+  document.getElementById('modeHint').textContent = (m==='quick'
+    ? 'Faster, lighter — summary + key lenses · ~10–20s'
+    : 'Full multi-angle analysis · 20–60s');
+}
+
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function renderCatTabs(){
+  const wrap = document.getElementById('catTabs');
+  wrap.innerHTML = Object.keys(CATEGORIES).map(c=>
+    '<span class="cat-tab'+(c===activeCat?' active':'')+'" onclick="pickCat(\''+c.replace(/'/g,"\\'")+'\')">'+esc(c)+'</span>'
+  ).join('');
+}
+function pickCat(c){
+  activeCat = c;
+  document.getElementById('discTitle').textContent = c;
+  renderCatTabs();
+  renderChips();
+}
+function renderChips(){
+  let items = CATEGORIES[activeCat]||[];
+  if(activeCat==='Trending now') items = shuffle(items).slice(0,5);   // shuffle the trending pool
+  document.getElementById('chips').innerHTML = items.map(t=>
+    '<span class="chip" onclick="fillChip(this)">'+esc(t)+'</span>'
+  ).join('');
+}
+function fillChip(el){ document.getElementById('q').value=el.textContent; runSearch(); }
+
+async function runSearch(){
+  const q = document.getElementById('q').value.trim();
+  if(!q) return;
+  const out = document.getElementById('out');
+  const btn = document.getElementById('go');
+
+  // --- DORMANT GATE 1: sign-in (off now). Real gate is server-side auth. ---
+  if(CONFIG.requireSignIn && !isSignedIn()){
+    out.innerHTML = '<div class="err"><b>Sign-in required.</b> (Disabled in this build — enable CONFIG.requireSignIn and wire backend auth before public launch.)</div>';
+    return;
+  }
+  // --- DORMANT GATE 2: rate limit (off now). Client check is bypassable; real enforcement is server-side. ---
+  if(CONFIG.rateLimit && !underRateLimit()){
+    out.innerHTML = '<div class="err"><b>Rate limit reached.</b> Try again later. (Demo only — real per-user enforcement lives in the backend.)</div>';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Working…';
+
+  // --- DORMANT FEATURE: cache (off now). Demo cache is per-browser; real shared cache is server-side. ---
+  const key = cacheKey(q);
+  if(CONFIG.caching && _cache.has(key)){
+    const c = _cache.get(key);
+    out.innerHTML = loadingHTML('<b>Cached result</b> — served instantly');
+    render(c.parsed, q, c.grounded, c.links);
+    btn.disabled = false; btn.textContent = 'Deep dive →';
+    return;
+  }
+
+  const caption = MODE==='quick'
+    ? '<b>Quick read</b> — pulling key sources — ~10–20s'
+    : '<b>Searching several angles</b> — event · counter-case · money trail · global coverage — 20–60s';
+  out.innerHTML = loadingHTML(caption);
+
+  try{
+    // Attempt 1: grounded with web search (multi-angle in deep mode)
+    let parsed = null, lastText = '', links = [];
+    try{
+      const r1 = await callClaude(q, true, MODE);
+      lastText = r1.text; links = r1.links;
+      parsed = extractJSON(lastText);
+    }catch(e){ /* fall through to attempt 2 */ }
+
+    // Attempt 2: if grounding failed to produce parseable output, retry on model knowledge only
+    let grounded = true;
+    if(!parsed){
+      grounded = false;
+      out.innerHTML = loadingHTML('<b>Refining</b> — re-running for a clean result');
+      const r2 = await callClaude(q, false, MODE);
+      lastText = r2.text; links = r2.links;
+      parsed = extractJSON(lastText);
+    }
+
+    if(parsed){
+      render(parsed, q, grounded, links, MODE);
+      if(CONFIG.caching) _cache.set(key, {parsed, grounded, links, at:Date.now()});
+    }
+    else renderRaw(lastText);
+  }catch(e){
+    const msg = String(e.message||e);
+    const friendly = /rate|429/i.test(msg) ? 'The service is busy right now.'
+                   : /network|fetch|load/i.test(msg) ? 'A network hiccup interrupted the request.'
+                   : 'Something went wrong generating this analysis.';
+    out.innerHTML = '<div class="err"><b>'+friendly+'</b><br>'+
+      'This can happen with very fresh or unusually phrased events. Try again, simplify the wording, or switch to Quick read.<br>'+
+      '<div class="err-actions"><button class="tool-btn" onclick="runSearch()">↻ Retry</button>'+
+      '<button class="tool-btn" onclick="newSearch()">✕ New search</button></div>'+
+      '<small class="err-detail">'+esc(msg)+'</small></div>';
+  }finally{
+    btn.disabled = false; btn.textContent = (MODE==='quick'?'Quick read →':'Deep dive →');
+  }
+}
+
+// ---- dormant-feature helpers (kept small; backend replaces with real versions) ----
+function cacheKey(q){ return q.trim().toLowerCase().replace(/\s+/g,' '); }
+function isSignedIn(){ return true; /* stub: backend checks a real session */ }
+function underRateLimit(){
+  const now=Date.now(), hourAgo=now-3600e3;
+  _reqTimes = _reqTimes.filter(t=>t>hourAgo);
+  if(_reqTimes.length >= CONFIG.rateLimitPerHour) return false;
+  _reqTimes.push(now); return true;
+}
+
+async function callClaude(q, useSearch, mode){
+  // Calls the Synoptica backend (/api/analyze), which holds the API key, owns the
+  // search cap, and handles rate-limiting + caching. The browser never sees the key.
+  const resp = await fetch("/api/analyze",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ query:q, mode:(mode||'deep'), useSearch:(useSearch!==false) })
+  });
+  let data;
+  try { data = await resp.json(); } catch(e){ throw new Error("Bad response from server"); }
+  if(!resp.ok || (data && data.error)) throw new Error((data && data.error) || ("Server error "+resp.status));
+  if(!data.text) throw new Error("Empty response");
+  return { text: data.text, links: data.links || [] };
+}
+
+// Pull the actual URLs the search returned — from web_search_tool_result blocks
+// and from citations attached to text blocks. De-duplicated by URL.
+function collectLinks(blocks){
+  const map = new Map();
+  const add = (url,title)=>{
+    if(!url || !/^https?:\/\//i.test(url)) return;
+    if(!map.has(url)) map.set(url,{url, title:(title||hostOf(url))});
+  };
+  for(const b of blocks){
+    if(b.type==="web_search_tool_result" && Array.isArray(b.content)){
+      b.content.forEach(r=> add(r.url, r.title));
+    }
+    if(b.type==="text" && Array.isArray(b.citations)){
+      b.citations.forEach(c=> add(c.url, c.title));
+    }
+  }
+  return Array.from(map.values()).slice(0,12);
+}
+function hostOf(u){ try{ return new URL(u).hostname.replace(/^www\./,''); }catch(e){ return u; } }
+
+// Classify a source URL into a reliability tier so users can weigh it at a glance.
+// primary   = official / primary data (govt, IGOs, central banks, regulators, research databases, filings)
+// reporting = original journalism (incl. international / non-Western outlets)
+// analysis  = think tanks, research institutes, watchdogs (informed interpretation, not primary)
+// reference = encyclopedic / tertiary summaries (use as navigation, not evidence)
+// other     = uncategorized — judge for yourself
+function tierOf(url){
+  const h = hostOf(url).toLowerCase();
+  const is = (...d)=> d.some(x=> h===x || h.endsWith('.'+x) || h.endsWith(x));
+
+  // ---- primary / official ----
+  // govt & intergovernmental TLD patterns across countries (.gov, .gov.uk, .gob.mx, .go.jp, .gouv.fr, mil, int, .ac.* gov labs)
+  if(/(^|\.)gov(\.[a-z]{2})?$/.test(h) || /(^|\.)gob\.[a-z]{2}$/.test(h) || /(^|\.)go\.[a-z]{2}$/.test(h) ||
+     /(^|\.)gouv\.[a-z]{2}$/.test(h) || /(^|\.)gov\.[a-z]{2}$/.test(h) ||
+     h.endsWith('.mil') || h.endsWith('.int') || /\.gc\.ca$/.test(h)) return 'primary';
+  if(is(
+    // IGOs & global bodies
+    'imf.org','worldbank.org','un.org','undp.org','unctad.org','unhcr.org','who.int','wto.org','oecd.org',
+    'bis.org','iea.org','iaea.org','nato.int','europa.eu','consilium.europa.eu','ecb.europa.eu','eib.org',
+    'au.int','asean.org','africau.int','arableagueonline.org','sco.org','brics.org',
+    // research databases / primary data
+    'sipri.org','aiddata.org','acleddata.com','ourworldindata.org','worldbank.org','data.worldbank.org',
+    // central banks & regulators / official US-UK-EU bodies
+    'federalreserve.gov','sec.gov','treasury.gov','state.gov','defense.gov','commerce.gov','ustr.gov',
+    'congress.gov','gao.gov','crsreports.congress.gov','usaspending.gov','eia.gov','census.gov','bls.gov',
+    'parliament.uk','bankofengland.co.uk','gov.uk','boj.or.jp','pbc.gov.cn','rbi.org.in'
+  )) return 'primary';
+
+  // ---- reporting / journalism (incl. international & non-Western mainstream) ----
+  if(is(
+    'reuters.com','apnews.com','afp.com','bloomberg.com','ft.com','wsj.com','nytimes.com','washingtonpost.com',
+    'bbc.com','bbc.co.uk','theguardian.com','economist.com','cnbc.com','cnn.com','time.com','npr.org','axios.com',
+    'politico.com','politico.eu','defensenews.com','foreignpolicy.com','foreignaffairs.com','thediplomat.com',
+    'apnews.org','marketwatch.com','barrons.com','forbes.com','businessinsider.com',
+    // international / non-Western mainstream journalism
+    'aljazeera.com','scmp.com','nikkei.com','asia.nikkei.com','dw.com','france24.com','lemonde.fr','spiegel.de',
+    'elpais.com','haaretz.com','timesofindia.indiatimes.com','thehindu.com','indianexpress.com','dawn.com',
+    'straitstimes.com','channelnewsasia.com','japantimes.co.jp','koreaherald.com','mg.co.za','premiumtimesng.com',
+    'theafricareport.com','folha.uol.com.br','clarin.com','kyivindependent.com','moscowtimes.ru'
+  )) return 'reporting';
+
+  // ---- analysis / think tanks / research institutes / watchdogs ----
+  if(is(
+    'brookings.edu','carnegieendowment.org','csis.org','cfr.org','rand.org','chathamhouse.org','atlanticcouncil.org',
+    'iiss.org','ecfr.eu','bruegel.org','piie.com','cato.org','heritage.org','wilsoncenter.org','crisisgroup.org',
+    'sipri.org','transparency.org','hrw.org','amnesty.org','globalwitness.org','peterson','cgdev.org',
+    'lowyinstitute.org','mei.edu','swp-berlin.org','clingendael.org','odi.org','observerresearch','orfonline.org'
+  )) return 'analysis';
+
+  // ---- reference / tertiary ----
+  if(is('wikipedia.org','britannica.com','investopedia.com','wikiwand.com','newworldencyclopedia.org',
+        'encyclopedia.com','statista.com','tradingeconomics.com')) return 'reference';
+
+  return 'other';
+}
+const TIER_RANK = {primary:0, reporting:1, analysis:2, reference:3, other:4};
+
+// Flag state-controlled / state-funded outlets. These can produce real journalism
+// in format but answer to a government, so a tool promising "every angle" should
+// mark them rather than pass them off as ordinary reporting. Editorially-independent
+// public broadcasters (BBC, DW, NPR, France24) are NOT flagged.
+function isStateMedia(url){
+  const h = hostOf(url).toLowerCase();
+  const is = (...d)=> d.some(x=> h===x || h.endsWith('.'+x) || h.endsWith(x));
+  return is(
+    'rt.com','sputnikglobe.com','sputniknews.com','tass.com','tass.ru','ria.ru','gazeta.ru',
+    'cgtn.com','xinhuanet.com','news.cn','globaltimes.cn','chinadaily.com.cn','cctv.com','people.com.cn',
+    'presstv.ir','tasnimnews.com','farsnews.ir','irna.ir','mehrnews.com',
+    'aa.com.tr','trtworld.com','almayadeen.net','almanar.com.lb',
+    'kcna.kp','vietnamplus.vn','prensa-latina.cu','telesurenglish.net'
+  );
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// Animated SVG node-graph loader: a central event node, links drawing out to
+// satellite (lens/source) nodes, plus a slow radar sweep. Pure SMIL — loops on
+// its own, no JS frame loop, no backend needed.
+function loadingHTML(caption){
+  const sats = [ [40,38],[164,46],[36,112],[150,116],[100,28] ];
+  let links='', nodes='';
+  sats.forEach((s,i)=>{
+    const delay=(i*0.45).toFixed(2);
+    links += '<line x1="100" y1="75" x2="'+s[0]+'" y2="'+s[1]+'" stroke="var(--rule)" stroke-width="1" '+
+             'stroke-dasharray="120" stroke-dashoffset="120">'+
+             '<animate attributeName="stroke-dashoffset" values="120;0;0;120" keyTimes="0;0.35;0.7;1" dur="2.8s" begin="'+delay+'s" repeatCount="indefinite"/>'+
+             '<animate attributeName="stroke" values="var(--rule);var(--cooperation);var(--rule)" dur="2.8s" begin="'+delay+'s" repeatCount="indefinite"/></line>';
+    nodes += '<circle cx="'+s[0]+'" cy="'+s[1]+'" r="4" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5">'+
+             '<animate attributeName="r" values="3;5;3" dur="2.8s" begin="'+delay+'s" repeatCount="indefinite"/>'+
+             '<animate attributeName="opacity" values="0.35;1;0.35" dur="2.8s" begin="'+delay+'s" repeatCount="indefinite"/></circle>';
+  });
+  const svg =
+    '<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">'+
+      // radar sweep ring
+      '<circle cx="100" cy="75" r="60" fill="none" stroke="var(--rule)" stroke-width="0.75" stroke-dasharray="2 5" opacity="0.6">'+
+        '<animateTransform attributeName="transform" type="rotate" from="0 100 75" to="360 100 75" dur="9s" repeatCount="indefinite"/></circle>'+
+      // sweep line
+      '<line x1="100" y1="75" x2="100" y2="15" stroke="var(--friction)" stroke-width="1" opacity="0.5">'+
+        '<animateTransform attributeName="transform" type="rotate" from="0 100 75" to="360 100 75" dur="3.5s" repeatCount="indefinite"/></line>'+
+      links + nodes +
+      // central event node
+      '<circle cx="100" cy="75" r="7" fill="var(--friction)">'+
+        '<animate attributeName="r" values="7;9;7" dur="1.6s" repeatCount="indefinite"/></circle>'+
+      '<circle cx="100" cy="75" r="7" fill="none" stroke="var(--friction)" stroke-width="1.5">'+
+        '<animate attributeName="r" values="7;18" dur="2s" repeatCount="indefinite"/>'+
+        '<animate attributeName="opacity" values="0.6;0" dur="2s" repeatCount="indefinite"/></circle>'+
+    '</svg>';
+  return '<div class="loadwrap">'+svg+'<div class="loadcap">'+caption+'<span class="dots"></span></div></div>';
+}
+
+// Robust extractor: handles code fences, surrounding prose, citation/footnote
+// markers injected by web search, and trailing commas. Tries several strategies.
+function extractJSON(text){
+  if(!text) return null;
+  let t = text;
+
+  // 1. strip code fences
+  t = t.replace(/```(?:json)?/gi,'');
+
+  // 2. strip common web-search citation artifacts:
+  //    bracketed numeric refs like [1], [1,2], superscript-style (1), and bare footnote markers
+  t = t.replace(/\[\s*\d+(?:\s*,\s*\d+)*\s*\]/g,'');     // [1] [1,2]
+  t = t.replace(/\uFEFF/g,'');                            // stray BOM
+
+  // 3. isolate the outermost {...} via brace matching (more reliable than indexOf/lastIndexOf)
+  const candidate = braceMatch(t);
+  const tries = [];
+  if(candidate) tries.push(candidate);
+  // also try the naive slice as a backup
+  const a=t.indexOf('{'), b=t.lastIndexOf('}');
+  if(a>=0&&b>a) tries.push(t.slice(a,b+1));
+
+  for(let raw of tries){
+    const variants = [raw, deTrailingComma(raw)];
+    for(const v of variants){
+      try{ return JSON.parse(v); }catch(e){}
+    }
+  }
+
+  // 4. last resort: repair a TRUNCATED object (response cut off mid-stream).
+  //    Recover the largest valid prefix by closing open strings/brackets.
+  const repaired = repairTruncated(t);
+  if(repaired){ try{ return JSON.parse(repaired); }catch(e){} }
+
+  return null;
+}
+
+// Recover a truncated JSON object: walk from the first '{', remember the
+// furthest point that was a "complete value" boundary, cut there, and close
+// any still-open brackets. Handles cut-offs inside strings/values.
+function repairTruncated(s){
+  const start = s.indexOf('{');
+  if(start<0) return null;
+  s = s.slice(start);
+  let inStr=false, esc=false;
+  const stack=[];
+  let cut=-1, cutStack=null;
+  const mark=(idx)=>{ cut=idx; cutStack=stack.slice(); };
+  for(let i=0;i<s.length;i++){
+    const c=s[i];
+    if(inStr){
+      if(esc) esc=false;
+      else if(c==='\\') esc=true;
+      else if(c==='"'){ inStr=false; }      // string closed; boundary set by following , } ]
+    }else{
+      if(c==='"') inStr=true;
+      else if(c==='{') stack.push('}');
+      else if(c==='[') stack.push(']');
+      else if(c==='}'||c===']'){ stack.pop(); mark(i+1); }
+      else if(c===',') mark(i);             // everything before a comma is a complete element
+    }
+  }
+  // If we have a clean boundary, cut there and close open brackets.
+  if(cut>=1 && cutStack){
+    let out = s.slice(0,cut).replace(/,\s*$/,'');
+    for(let k=cutStack.length-1;k>=0;k--) out += cutStack[k];
+    try{ JSON.parse(out); return out; }catch(e){}
+  }
+  // Fallback: cut was never set (truncated inside the first values).
+  // Close an open string, drop any dangling partial property, then close brackets.
+  return salvagePartial(s);
+}
+
+// Close open string, strip a trailing incomplete key/value, close all brackets.
+function salvagePartial(s){
+  let inStr=false, esc=false; const stack=[];
+  for(let i=0;i<s.length;i++){
+    const c=s[i];
+    if(inStr){ if(esc)esc=false; else if(c==='\\')esc=true; else if(c==='"')inStr=false; }
+    else{ if(c==='"')inStr=true; else if(c==='{')stack.push('}'); else if(c==='[')stack.push(']');
+          else if(c==='}'||c===']')stack.pop(); }
+  }
+  let out = s;
+  if(inStr) out += '"';                       // close dangling string
+  // remove a trailing property that has a key but no complete value, e.g. ...,"reading":"x" is fine,
+  // but ...,"reading": (no value) or ...,"reading" must be dropped.
+  out = out.replace(/,\s*"[^"]*"\s*:\s*$/,'') // key: with nothing after
+           .replace(/,\s*"[^"]*"\s*$/,'')     // bare trailing key
+           .replace(/\{\s*"[^"]*"\s*:\s*$/,'{') // open obj then key: nothing
+           .replace(/,\s*$/,'');               // dangling comma
+  for(let k=stack.length-1;k>=0;k--) out += stack[k];
+  try{ JSON.parse(out); return out; }catch(e){ return null; }
+}
+
+// find first balanced {...} block (ignores braces inside strings)
+function braceMatch(s){
+  const start = s.indexOf('{');
+  if(start<0) return null;
+  let depth=0, inStr=false, esc=false;
+  for(let i=start;i<s.length;i++){
+    const c=s[i];
+    if(inStr){
+      if(esc){ esc=false; }
+      else if(c==='\\'){ esc=true; }
+      else if(c==='"'){ inStr=false; }
+    }else{
+      if(c==='"') inStr=true;
+      else if(c==='{') depth++;
+      else if(c==='}'){ depth--; if(depth===0) return s.slice(start,i+1); }
+    }
+  }
+  return null;
+}
+
+// remove trailing commas before } or ]
+function deTrailingComma(s){ return s.replace(/,(\s*[}\]])/g,'$1'); }
+
+function renderRaw(text){
+  document.getElementById('out').innerHTML =
+    '<div class="res-kicker">Raw analysis</div>'+
+    '<p style="font-size:13px;color:var(--gray)">(Couldn\'t parse the structured format even after repair — showing raw output. This usually means the model\'s reply was malformed; try again.)</p>'+
+    '<div class="raw">'+esc(text)+'</div>';
+}
+
+function render(d, q, grounded, links, mode){
+  const out = document.getElementById('out');
+  links = links || [];
+  const genAt = new Date();
+  _lastResult = {d, q, grounded, links, mode:mode||MODE, genAt};   // remember for share/copy/download
+  let h = '';
+  h += '<div class="restools">'+
+    '<button class="tool-btn" onclick="newSearch()">✕ New search</button>'+
+    '<button class="tool-btn" onclick="copyText()">⧉ Copy text</button>'+
+    '<button class="tool-btn" onclick="copyLink()">🔗 Copy link</button>'+
+    '<button class="tool-btn" onclick="downloadResult()">↓ Download</button>'+
+    '<span class="mode-badge">'+((mode||MODE)==='quick'?'Quick read':'Deep dive')+'</span>'+
+    '</div>';
+  h += '<div class="gen-stamp">Generated '+fmtStamp(genAt)+(grounded===false?' · ungrounded':' · live search')+'</div>';
+  // thin-result note: parsed but little substance
+  const thin = (!Array.isArray(d.lenses)||d.lenses.length===0) && (!Array.isArray(d.history)||d.history.length<=1);
+  if(thin) h += '<div class="thin-note">⚠ Limited coverage for this query — the analysis below may be thin. Try a more specific or widely-reported phrasing of the event.</div>';
+  h += '<div class="res-kicker">'+((mode||MODE)==='quick'?'Quick read':'Deep dive')+' · '+esc(q)+'</div>';
+  h += '<h2 class="res-title">'+esc(d.event||q)+'</h2>';
+  if(d.summary) h += '<p class="res-summary">'+esc(d.summary)+'</p>';
+  if(d.whyNow) h += '<div class="whynow"><b>Why now</b>'+esc(d.whyNow)+'</div>';
+  if(grounded===false) h += '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--gray);margin:4px 0 0;">⚠ Live source grounding was unavailable for this run — based on model knowledge. Verify against the sources below.</p>';
+  if(d.caveat) h += '<div class="caveat"><b>Key uncertainty / what would falsify this</b>'+esc(d.caveat)+'</div>';
+
+  if(Array.isArray(d.lenses)&&d.lenses.length){
+    h += '<div class="section-label"><span>Four-lens reading</span><span>'+d.lenses.length+' applied</span></div>';
+    d.lenses.forEach(l=>{
+      const c = ['High','Guarded','Speculative'].includes(l.confidence)?l.confidence:'Guarded';
+      const LENS_LABEL = {FIC:'Financial Analysis', MIC:'Military Analysis', TIC:'Technological Analysis', GEO:'Geopolitical Analysis'};
+      const codeLabel = LENS_LABEL[(l.code||'').toUpperCase()] || esc(l.code);
+      h += '<div class="lens"><div class="lens-top"><div><div class="lens-code">'+esc(codeLabel)+'</div>'+
+           '<div class="lens-name">'+esc(l.name)+'</div></div>'+
+           '<span class="lens-conf '+c+'">'+esc(c)+'</span></div>'+
+           '<p class="lens-read">'+esc(l.reading)+'</p>';
+      if(Array.isArray(l.indicators)&&l.indicators.length)
+        h += '<div class="lens-ind">Watch: <span>'+l.indicators.map(esc).join('</span> · <span>')+'</span></div>';
+      h += '</div>';
+    });
+  }
+
+  // PERSPECTIVES — proponents vs critics ledger
+  const pv = d.perspectives||{};
+  const pros = Array.isArray(pv.proponents)?pv.proponents:[];
+  const cons = Array.isArray(pv.critics)?pv.critics:[];
+  if(pros.length||cons.length){
+    h += '<div class="section-label"><span>How different sides read it</span><span>Strongest case each way</span></div>';
+    if(pv.crux) h += '<div class="crux"><b>The empirical crux</b>'+esc(pv.crux)+'</div>';
+    h += '<div class="ledger"><div class="ledger-col"><div class="ledger-head for">In favor / proponents</div>';
+    h += pros.length ? pros.map(p=>'<div class="stance"><div class="stance-who">'+esc(p.who)+'</div><p class="stance-text">'+esc(p.argument)+'</p></div>').join('') : '<p class="stance-text" style="color:var(--gray)">No clear proponent case surfaced.</p>';
+    h += '</div><div class="ledger-rule"></div><div class="ledger-col"><div class="ledger-head against">Against / critics</div>';
+    h += cons.length ? cons.map(p=>'<div class="stance"><div class="stance-who">'+esc(p.who)+'</div><p class="stance-text">'+esc(p.argument)+'</p></div>').join('') : '<p class="stance-text" style="color:var(--gray)">No clear critic case surfaced.</p>';
+    h += '</div></div>';
+  }
+
+  if(Array.isArray(d.history)&&d.history.length){
+    h += '<div class="section-label"><span>How we got here</span><span>Historical lead-up</span></div><div class="timeline">';
+    d.history.forEach(x=> h += '<div class="tl-item"><div class="tl-date">'+esc(x.date)+'</div><p class="tl-text">'+esc(x.text)+'</p></div>');
+    h += '</div>';
+  }
+
+  // FRAGILITY — only for deals/ceasefires/negotiations
+  const fr = d.fragility;
+  if(fr && typeof fr==='object' && (fr.verdict||(Array.isArray(fr.spoilers)&&fr.spoilers.length))){
+    const v=(fr.verdict||'').toLowerCase();
+    if(!v.includes('n/a') && !v.includes('not a deal')){
+      h += '<div class="section-label"><span>Will it hold?</span><span>Fragility &amp; spoiler risk</span></div>';
+      if(fr.verdict) h += '<div class="frag-verdict"><b>Durability</b>'+esc(fr.verdict)+'</div>';
+      if(Array.isArray(fr.spoilers)&&fr.spoilers.length){
+        fr.spoilers.forEach(s=> h += '<div class="spoiler"><div class="sp-actor">'+esc(s.actor)+'</div>'+
+          '<p class="sp-why">'+esc(s.why)+'</p>'+
+          (s.capability?'<div class="sp-cap"><b>Capability:</b> '+esc(s.capability)+'</div>':'')+'</div>');
+      }
+      if(fr.collapseTrigger) h += '<div class="frag-line"><b>Most likely collapse trigger</b>'+esc(fr.collapseTrigger)+'</div>';
+      if(fr.counterview) h += '<div class="frag-line counter"><b>The other side / why it may hold</b>'+esc(fr.counterview)+'</div>';
+    }
+  }
+
+  if(Array.isArray(d.connected)&&d.connected.length){
+    h += '<div class="section-label"><span>Connected events</span><span>What it links to</span></div>';
+    d.connected.forEach(x=> h += '<div class="conn"><div class="conn-ev">'+esc(x.event)+'</div><div class="conn-link">'+esc(x.link)+'</div></div>');
+  }
+
+  if(Array.isArray(d.outcomes)&&d.outcomes.length){
+    h += '<div class="section-label"><span>Where it may lead</span><span>Scenarios</span></div>';
+    d.outcomes.forEach(x=> h += '<div class="out"><div class="out-top"><span class="out-scn">'+esc(x.scenario)+'</span>'+
+         '<span class="out-like">'+esc(x.likelihood)+'</span></div>'+
+         '<div class="out-watch"><b>Signal to watch:</b> '+esc(x.watch)+'</div></div>');
+  }
+
+  // SOURCES — real clickable links the search actually returned, tiered by reliability
+  if(links.length){
+    const tiered = links.map(l=>({...l, tier:tierOf(l.url), state:isStateMedia(l.url)}))
+                        .sort((a,b)=> (TIER_RANK[a.tier]-TIER_RANK[b.tier]));
+    const anyState = tiered.some(l=>l.state);
+    h += '<div class="section-label"><span>Sources the engine read</span><span>'+links.length+' live links</span></div>';
+    h += '<p class="tierkey"><span class="tier primary">primary</span> official / data &nbsp;·&nbsp; <span class="tier reporting">reporting</span> journalism &nbsp;·&nbsp; <span class="tier analysis">analysis</span> think tanks &nbsp;·&nbsp; <span class="tier reference">reference</span> encyclopedic'+
+      (anyState?' &nbsp;·&nbsp; <span class="stateflag">⚑ state-controlled</span> answers to a government — weigh accordingly':'')+
+      ' — use as a lead, not proof</p>';
+    h += '<div class="srclist">'+tiered.map(l=>
+      '<a class="srcitem" href="'+esc(l.url)+'" target="_blank" rel="noopener">'+
+        '<span class="srcleft"><span class="tier '+l.tier+'">'+l.tier+'</span>'+
+        (l.state?'<span class="stateflag">⚑ state</span>':'')+
+        '<span class="srctitle">'+esc(l.title)+'</span></span>'+
+        '<span class="srchost">'+esc(hostOf(l.url))+' ↗</span></a>'
+    ).join('')+'</div>';
+  }
+
+  if(Array.isArray(d.sources)&&d.sources.length){
+    h += '<div class="section-label"><span>Also verify against</span><span>Primary databases</span></div>';
+    h += '<p class="sources">'+d.sources.map(esc).join(' · ')+'</p>';
+  }
+
+  if(!links.length && grounded!==false){
+    h += '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--gray);margin-top:14px;">No live links were captured for this run.</p>';
+  }
+
+  out.innerHTML = h;
+}
+
+/* ---- share / copy / download ---- */
+let _lastResult = null;
+
+function fmtStamp(d){
+  try{ return d.toLocaleString(undefined,{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
+  catch(e){ return d.toISOString(); }
+}
+function newSearch(){
+  document.getElementById('out').innerHTML='';
+  const q=document.getElementById('q'); q.value=''; q.focus();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function resultToText(){
+  if(!_lastResult) return '';
+  const {d,q} = _lastResult; const L=[];
+  L.push('SYNOPTICA — '+(d.event||q));
+  if(d.summary) L.push('\n'+d.summary);
+  if(d.whyNow) L.push('\nWHY NOW: '+d.whyNow);
+  if(d.caveat) L.push('\nKEY UNCERTAINTY: '+d.caveat);
+  if(Array.isArray(d.lenses)&&d.lenses.length){ L.push('\nFOUR-LENS READING');
+    d.lenses.forEach(l=>L.push('• ['+(l.code||'')+' · '+(l.confidence||'')+'] '+(l.name||'')+': '+(l.reading||''))); }
+  const pv=d.perspectives||{};
+  if(pv.crux) L.push('\nEMPIRICAL CRUX: '+pv.crux);
+  if(Array.isArray(pv.proponents)&&pv.proponents.length){ L.push('\nIN FAVOR'); pv.proponents.forEach(p=>L.push('• '+(p.who||'')+': '+(p.argument||''))); }
+  if(Array.isArray(pv.critics)&&pv.critics.length){ L.push('\nAGAINST'); pv.critics.forEach(p=>L.push('• '+(p.who||'')+': '+(p.argument||''))); }
+  if(Array.isArray(d.history)&&d.history.length){ L.push('\nHOW WE GOT HERE'); d.history.forEach(x=>L.push('• '+(x.date||'')+' — '+(x.text||''))); }
+  const fr=d.fragility;
+  if(fr&&typeof fr==='object'&&fr.verdict&&!/n\/a|not a deal/i.test(fr.verdict)){
+    L.push('\nWILL IT HOLD? — '+fr.verdict);
+    if(Array.isArray(fr.spoilers)) fr.spoilers.forEach(s=>L.push('• Spoiler: '+(s.actor||'')+' — '+(s.why||'')+(s.capability?(' (can: '+s.capability+')'):'')));
+    if(fr.collapseTrigger) L.push('• Collapse trigger: '+fr.collapseTrigger);
+    if(fr.counterview) L.push('• Counter-view: '+fr.counterview);
+  }
+  if(Array.isArray(d.connected)&&d.connected.length){ L.push('\nCONNECTED'); d.connected.forEach(x=>L.push('• '+(x.event||'')+' — '+(x.link||''))); }
+  if(Array.isArray(d.outcomes)&&d.outcomes.length){ L.push('\nWHERE IT MAY LEAD'); d.outcomes.forEach(x=>L.push('• ['+(x.likelihood||'')+'] '+(x.scenario||'')+' — watch: '+(x.watch||''))); }
+  if(Array.isArray(_lastResult.links)&&_lastResult.links.length){ L.push('\nSOURCES'); _lastResult.links.forEach(s=>L.push('• '+(s.title||'')+' — '+s.url)); }
+  L.push('\n— Generated by Synoptica'+(_lastResult.genAt?(' on '+fmtStamp(_lastResult.genAt)):'')+'. AI-generated; verify against sources.');
+  return L.join('\n');
+}
+function flashBtn(btn){ const t=btn.textContent; btn.textContent='✓ Copied'; btn.classList.add('done'); setTimeout(()=>{btn.textContent=t;btn.classList.remove('done');},1400); }
+function copyText(){ const t=resultToText(); navigator.clipboard?.writeText(t).then(()=>flashBtn(event.target)).catch(()=>fallbackCopy(t,event.target)); }
+function copyLink(){
+  if(!_lastResult) return;
+  const base = location.origin+location.pathname;
+  const url = base+'?q='+encodeURIComponent(_lastResult.q)+'&mode='+(_lastResult.mode||'deep');
+  navigator.clipboard?.writeText(url).then(()=>flashBtn(event.target)).catch(()=>fallbackCopy(url,event.target));
+}
+function fallbackCopy(t,btn){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');flashBtn(btn);}catch(e){} ta.remove(); }
+function downloadResult(){
+  if(!_lastResult) return;
+  const blob=new Blob([resultToText()],{type:'text/plain'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='synoptica-'+(_lastResult.q||'analysis').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)+'.txt';
+  a.click();
+}
+
+/* ---- bootstrap ---- */
+function toggleHow(){
+  const p=document.getElementById('howpanel');
+  const link=document.querySelector('.how-link');
+  const open=p.classList.toggle('open');
+  if(link) link.textContent = open ? 'How this works ▴' : 'How this works ▾';
+}
+renderCatTabs();
+renderChips();
+document.getElementById('q').addEventListener('keydown',e=>{ if(e.key==='Enter') runSearch(); });
+
+// Shared link: ?q=...&mode=... auto-runs the same search for the recipient.
+(function(){
+  const p = new URLSearchParams(location.search);
+  const sq = p.get('q');
+  if(sq){
+    if(p.get('mode')==='quick') setMode('quick');
+    document.getElementById('q').value = sq;
+    runSearch();
+  }
+})();
+</script>
+</body>
+</html>
