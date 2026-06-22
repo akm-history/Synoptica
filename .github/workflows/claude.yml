@@ -1,24 +1,37 @@
-name: Claude Code
-
-on:
-  issue_comment:
-    types: [created]
-
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-  id-token: write
-
-jobs:
-  claude:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Claude Code Base Action
-        uses: anthropics/claude-code-base-action@v0.0.14
-        with:
-          prompt: ${{ github.event.comment.body }}
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+- name: Claude Code Base Action
+  # You may pin to the exact commit or the version.
+  # uses: anthropics/claude-code-base-action@a0d79f9c1798b06292dbc80f8f95cf742ce7a213
+  uses: anthropics/claude-code-base-action@v0.0.14
+  with:
+    # The prompt to send to Claude Code (mutually exclusive with prompt_file)
+    prompt: # optional, default is 
+    # Path to a file containing the prompt to send to Claude Code (mutually exclusive with prompt)
+    prompt_file: # optional, default is 
+    # Comma-separated list of allowed tools for Claude Code to use
+    allowed_tools: # optional, default is 
+    # Comma-separated list of disallowed tools that Claude Code cannot use
+    disallowed_tools: # optional, default is 
+    # Maximum number of conversation turns (default: no limit)
+    max_turns: # optional, default is 
+    # MCP configuration as JSON string or path to MCP configuration JSON file
+    mcp_config: # optional, default is 
+    # Override system prompt
+    system_prompt: # optional, default is 
+    # Append to system prompt
+    append_system_prompt: # optional, default is 
+    # Model to use (provider-specific format required for Bedrock/Vertex)
+    model: # optional
+    # DEPRECATED: Use 'model' instead. Model to use (provider-specific format required for Bedrock/Vertex)
+    anthropic_model: # optional
+    # Custom environment variables to pass to Claude Code execution (YAML multiline format)
+    claude_env: # optional, default is 
+    # Timeout in minutes for Claude Code execution
+    timeout_minutes: # optional, default is 10
+    # Anthropic API key (required for direct Anthropic API)
+    anthropic_api_key: # optional, default is 
+    # Use Amazon Bedrock with OIDC authentication instead of direct Anthropic API
+    use_bedrock: # optional, default is false
+    # Use Google Vertex AI with OIDC authentication instead of direct Anthropic API
+    use_vertex: # optional, default is false
+    # Whether to use Node.js dependency caching (set to true only for Node.js projects with lock files)
+    use_node_cache: # optional, default is false
