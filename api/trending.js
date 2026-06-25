@@ -11,17 +11,48 @@
 // Without it, the list still refreshes ~daily but is per-instance (may vary).
 // ----------------------------------------------------------------------------
 
-// Fallback list — used if generation fails or no API key (UI is never empty).
-const FALLBACK = [
-  'EU joint defense borrowing and the SAFE facility',
-  'US Section 301 forced-labor tariffs on 60 countries',
-  'China rare-earth export controls',
-  'Undersea cable sabotage in the Baltic',
-  "Russia's Africa Corps and the Sahel coups",
-  'NATO 5% of GDP defense spending target',
-  'Iran nuclear talks and sanctions relief',
-  'Critical minerals competition in DR Congo'
-];
+// Fallback set — used if generation fails or no API key (UI is never empty).
+// Keys MUST match the category tab names in the frontend.
+const FALLBACK = {
+  'Trending now': [
+    'EU joint defense borrowing and the SAFE facility',
+    'US Section 301 forced-labor tariffs on 60 countries',
+    'China rare-earth export controls',
+    'Undersea cable sabotage in the Baltic',
+    "Russia's Africa Corps and the Sahel coups"
+  ],
+  'Conflict & defense': [
+    'NATO 5% of GDP defense spending target',
+    'EU joint defense borrowing and the SAFE facility',
+    'Ukraine long-range strike policy shifts',
+    'Iran nuclear talks and sanctions relief'
+  ],
+  'Trade & tariffs': [
+    'US Section 301 forced-labor tariffs on 60 countries',
+    'EU-China EV tariff dispute',
+    'USMCA renegotiation pressures',
+    'Semiconductor export-control escalation'
+  ],
+  'Debt & capital': [
+    'Argentina IMF program under Milei',
+    'African sovereign debt distress and the IMF',
+    'China overseas lending slowdown',
+    'Global bond market volatility'
+  ],
+  'Surveillance & tech': [
+    'UK Online Safety Act enforcement',
+    'EU AI Act implementation',
+    'AI chip export controls and Nvidia',
+    'Undersea cable security and sabotage'
+  ],
+  'Resources & minerals': [
+    'China rare-earth export controls',
+    'Critical minerals competition in DR Congo',
+    'Lithium nationalization in Latin America',
+    'Gulf states and the global energy transition'
+  ]
+};
+const CATEGORY_NAMES = Object.keys(FALLBACK);
 
 const KV_URL   = process.env.UPSTASH_REDIS_REST_URL;
 const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -55,12 +86,13 @@ async function setCached(day, val){
 
 async function generate(){
   if(!process.env.ANTHROPIC_API_KEY) return null;
+  const cats = CATEGORY_NAMES.join('", "');
   const body = {
     model: 'claude-sonnet-4-6',
-    max_tokens: 600,
-    system: 'You list the most significant CURRENT world events for a geopolitical analysis tool. Use web search to find what is actually in the news right now. Return ONLY a JSON array of 8 short, neutral, search-ready event phrases (4-9 words each) — no numbering, no commentary, no markdown. Mix conflict, trade/economics, defense, tech/surveillance, and resources. Phrases should be specific enough to analyze (e.g. "China rare-earth export controls", not "China news").',
-    messages: [{ role: 'user', content: 'List today\'s 8 most significant world events as a JSON array of short search phrases.' }],
-    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2 }]
+    max_tokens: 1400,
+    system: 'You curate CURRENT-events suggestion lists for a geopolitical analysis tool. Use web search to find what is actually in the news right now. Return ONLY a JSON object whose keys are EXACTLY these categories: "'+cats+'". Each value is an array of 4-5 short, neutral, search-ready event phrases (4-9 words each) reflecting what is currently happening in that category. "Trending now" = the most significant overall stories right now across all categories. Phrases must be specific enough to analyze (e.g. "China rare-earth export controls", not "China news"). No numbering, no commentary, no markdown, no citations — just the JSON object.',
+    messages: [{ role: 'user', content: 'Build today\'s suggestion lists for each category as a single JSON object.' }],
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }]
   };
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -75,33 +107,41 @@ async function generate(){
     const data = await r.json();
     if(data && data.error) return null;
     const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
-    // extract the JSON array, tolerating preamble/citations
     let t = text.replace(/```(?:json)?/gi, '').replace(/\[\s*\d+(?:\s*,\s*\d+)*\s*\]/g, '');
-    const a = t.indexOf('['), b = t.lastIndexOf(']');
+    const a = t.indexOf('{'), b = t.lastIndexOf('}');
     if(a < 0 || b <= a) return null;
-    const arr = JSON.parse(t.slice(a, b + 1));
-    const clean = arr.filter(x => typeof x === 'string' && x.trim().length > 4).map(x => x.trim()).slice(0, 8);
-    return clean.length >= 4 ? clean : null;
+    const obj = JSON.parse(t.slice(a, b + 1));
+    // keep only known categories with valid non-empty string arrays; fall back per-category
+    const out = {};
+    for(const name of CATEGORY_NAMES){
+      const arr = Array.isArray(obj[name]) ? obj[name].filter(x => typeof x === 'string' && x.trim().length > 4).map(x => x.trim()).slice(0, 5) : [];
+      out[name] = arr.length >= 3 ? arr : FALLBACK[name];
+    }
+    return out;
   } catch { return null; }
 }
 
 export default async function handler(req, res){
   const day = todayKey();
 
-  // 1. serve today's cached list if present
+  // 1. serve today's cached set if present
   try {
     const hit = await getCached(day);
-    if(hit){ res.status(200).json({ date: day, topics: JSON.parse(hit), cached: true }); return; }
+    if(hit){
+      const categories = JSON.parse(hit);
+      res.status(200).json({ date: day, categories, topics: categories['Trending now'], cached: true });
+      return;
+    }
   } catch { /* fall through to generate */ }
 
-  // 2. generate today's list (one Claude call w/ search), cache it
-  const topics = await generate();
-  if(topics){
-    await setCached(day, JSON.stringify(topics));
-    res.status(200).json({ date: day, topics, cached: false });
+  // 2. generate today's full set (ONE Claude call w/ search for all categories), cache it
+  const categories = await generate();
+  if(categories){
+    await setCached(day, JSON.stringify(categories));
+    res.status(200).json({ date: day, categories, topics: categories['Trending now'], cached: false });
     return;
   }
 
   // 3. fallback — never leave the UI empty
-  res.status(200).json({ date: day, topics: FALLBACK, cached: false, fallback: true });
+  res.status(200).json({ date: day, categories: FALLBACK, topics: FALLBACK['Trending now'], cached: false, fallback: true });
 }
