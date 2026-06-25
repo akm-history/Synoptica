@@ -82,6 +82,18 @@
   .whynow{border-left:3px solid var(--friction);background:#fbeae6;padding:12px 14px;font-size:15px;margin:14px 0;}
   .whynow b{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:3px;color:var(--friction);}
   .crux{border:1px solid var(--ink);padding:12px 14px;font-size:14.5px;margin:4px 0 16px;}
+  .factcheck{border-left:3px solid var(--gray);padding:9px 0 9px 14px;margin-bottom:12px;}
+  .factcheck.verified{border-left-color:var(--cooperation);}
+  .factcheck.reported{border-left-color:var(--gray);}
+  .factcheck.unreachable{border-left-color:var(--friction);}
+  .fc-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .fc-status{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;font-weight:600;}
+  .fc-status.verified{background:#e4efed;color:var(--cooperation);}
+  .fc-status.reported{background:var(--paper-dim);color:var(--gray);}
+  .fc-status.unreachable{background:#fbeae6;color:var(--friction);}
+  .fc-src{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--cooperation);white-space:nowrap;}
+  .fc-claim{font-size:14.5px;margin:4px 0 2px;}
+  .fc-note{font-size:13px;color:var(--gray);}
   .crux b{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:3px;color:var(--ink);}
   .frag-verdict{background:#fbeae6;border:1px solid var(--friction);padding:10px 14px;font-size:15px;font-weight:600;margin:4px 0 12px;}
   .frag-verdict b{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:2px;color:var(--friction);font-weight:600;}
@@ -185,7 +197,7 @@
     </div>
     <div class="masthead-row"><span>Event Deep-Dive Engine</span><span><a class="how-link" onclick="toggleHow()">How this works ▾</a></span></div>
     <h1>Search any global event.</h1>
-    <p class="dek">Type a conflict, policy, market move, or geopolitical shift. The engine pulls current sources and reads it through four lenses — financial, military, technological, and geopolitical shifts — then maps its history, connections, and plausible futures.</p>
+    <p class="dek">Type a conflict, policy, market move, geopolitical event — or any current-events topic. The engine pulls current sources and, where relevant, reads it through four lenses — financial, military, technological, and geopolitical — then maps its history, connections, and plausible futures.</p>
     <div class="howpanel" id="howpanel">
       <div class="how-grid">
         <div><span class="how-h">The four lenses</span><p>Every event is read through up to four frames — <b>Financial</b> (who profits, capital flows), <b>Military</b> (spending, contracts, arms), <b>Technological</b> (surveillance, data, dual-use), and <b>Geopolitical</b> (alliances, leverage, sovereignty). Only the ones that genuinely fit are shown, each with a confidence rating.</p></div>
@@ -296,9 +308,10 @@ EPISTEMIC RULES — follow strictly:
 - Favor OPPORTUNISM over COORDINATION. Institutions follow openings; do not assert secret central planning.
 - No conspiracy theories. Confirmed strategy stated by officials or reported by credible outlets is fine; manufactured-pretext claims must be flagged Speculative.
 - Note where coverage conflicts across regions or where one side's framing dominates the available sources.
-- NEUTRAL ATTRIBUTION OF CONTESTED LABELS. Contested political, moral, or ideological labels — including but not limited to "far-right", "far-left", "extremist", "radical", "racist", "terrorist", "hate group", "regime", "insurrectionist" — must NEVER appear as fact in your own voice. For each, either (a) attribute it to a specific named source ("groups the ADL classifies as extremist", "which the government designates a terrorist organization"), or (b) replace it with the concrete, verifiable attribute that earned the label ("a group that organized armed protests", "a party campaigning on mass deportation"). Apply this with STRICT SYMMETRY: within a single analysis every actor across the political spectrum gets identical treatment. If one group's label is attributed, all are; if one is described by concrete attributes, all are. You may not characterize one side and leave the other uncharacterized or label one plainly while attributing the other's label. This is symmetry by neutral attribution — never balance a loaded label on one side by adding a loaded label to the other.
-- CONTESTED FACTS ARE NOT SETTLED FACTS. Specific checkable claims that are charged or disputed — demographic composition (e.g. "all-white jury"), casualty figures, who acted first, motive/intent — must be traceable to sources. If only some outlets assert it, or sources conflict, present it as claimed and attributed ("reports described the jury as all-white"), not as settled fact ("the all-white jury"). Never inherit a charged factual characterization from coverage and restate it as established fact. If you cannot verify a charged factual detail, say so or omit it.
-- FLAG SKEWED COVERAGE. If the available sources on an event lean heavily one way, say so in the caveat ("available coverage skews [direction]; counter-perspectives were limited in what could be retrieved") rather than presenting a one-sided source base as the complete picture.
+- NEUTRAL ATTRIBUTION OF CONTESTED LABELS. Contested political, moral, or ideological labels — including but not limited to "far-right", "far-left", "extremist", "radical", "racist", "terrorist", "hate group", "regime", "insurrectionist" — must NEVER appear as fact in your own voice. For each, either (a) attribute it to a specific named source, or (b) replace it with the concrete, verifiable attribute that earned the label. Apply this with STRICT SYMMETRY: within a single analysis every actor across the political spectrum gets identical treatment. If one group's label is attributed, all are; if one is described by concrete attributes, all are. Symmetry by neutral attribution — never balance a loaded label on one side by adding a loaded label to the other.
+- CONTESTED FACTS ARE NOT SETTLED FACTS. Charged or disputed checkable claims — demographic composition (e.g. "all-white jury"), casualty figures, who acted first, motive — must be traceable. If only some outlets assert it or sources conflict, present it as claimed and attributed, not as settled fact. Never restate a charged characterization from coverage as established fact; if you cannot verify it, say so or omit it. Never inflate a narrow verified fact into a broader unverified one ("no Black jurors" is not "all-white jury").
+- ANCHOR & LINK CHARGED CLAIMS. For charged composition/count/sequence claims, populate "factChecks": status "verified" (anchored to a reachable primary/official record), "reported" (outlets assert it, no authoritative record found), or "unreachable" (a primary record likely exists but was paywalled/un-indexed). Put the EXACT url you actually retrieved in "source". Anchor to the official record over any single outlet, same standard for every actor.
+- FLAG SKEWED COVERAGE. If available sources lean heavily one way, say so in the caveat rather than presenting a one-sided source base as the complete picture.
 
 Use web search to ground current facts. Then respond with ONLY a JSON object (no markdown, no preamble, no code fences, no citation brackets like [1], no text before or after the object) in EXACTLY this shape:
 {
@@ -312,9 +325,10 @@ Use web search to ground current facts. Then respond with ONLY a JSON object (no
  "connected":[{"event":"related event","link":"the specific causal or structural connection, not just 'related'"}],
  "outcomes":[{"scenario":"plausible future with its mechanism","likelihood":"more likely|even|less likely","watch":"the specific signal that would confirm this path"}],
  "sources":["primary sources to verify against, e.g. SIPRI, IMF WEO, World Bank IDS, AidData, USAspending.gov, official filings"],
+ "factChecks":[{"claim":"a charged composition/count/sequence claim, stated narrowly","status":"verified|reported|unreachable","source":"https://… a url you actually retrieved, or empty","note":"what the record shows, or why it's unreachable"}],
  "caveat":"the key uncertainty, and PLAINLY what evidence would prove the dominant reading wrong"
 }
-Aim for 2-3 lenses, 4-6 history items forming a clear chain, 2-3 connected, 2-3 outcomes. Include "fragility" ONLY when the event is a deal/ceasefire/treaty/negotiation; otherwise set fragility to null. Be dense and specific rather than long-winded — every sentence should carry a fact, a mechanism, or a number.`;
+Aim for 2-3 lenses, 4-6 history items forming a clear chain, 2-3 connected, 2-3 outcomes. Include "fragility" ONLY when the event is a deal/ceasefire/treaty/negotiation; otherwise set fragility to null. Include "factChecks" ONLY when the event contains charged composition/count/sequence claims; otherwise use an empty array. Be dense and specific rather than long-winded — every sentence should carry a fact, a mechanism, or a number.`;
 
 /* ---- discovery: trending pool + browsable categories ----
    NOTE: these are a CURATED, hardcoded set, not a live feed. Real "trending"
@@ -880,6 +894,29 @@ function render(d, q, grounded, links, mode){
   if(grounded===false) h += '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--gray);margin:4px 0 0;">⚠ Live source grounding was unavailable for this run — based on model knowledge. Verify against the sources below.</p>';
   if(d.caveat) h += '<div class="caveat"><b>Key uncertainty / what would falsify this</b>'+esc(d.caveat)+'</div>';
 
+  // CHECKED CLAIMS — charged composition/count claims with status + cross-checked source link
+  if(Array.isArray(d.factChecks) && d.factChecks.length){
+    const realUrls = (links||[]).map(l=>l.url);
+    const realHosts = (links||[]).map(l=>hostOf(l.url));
+    h += '<div class="section-label"><span>Checked claims</span><span>charged facts, traced</span></div>';
+    d.factChecks.forEach(f=>{
+      const st = ['verified','reported','unreachable'].includes(f.status)? f.status : 'reported';
+      // only trust a link if the model's cited URL was actually retrieved by the search
+      let linkHtml = '';
+      const u = (f.source||'').trim();
+      if(u && /^https?:\/\//i.test(u)){
+        if(realUrls.includes(u)) linkHtml = '<a class="fc-src" href="'+esc(u)+'" target="_blank" rel="noopener">see source ↗</a>';
+        else { const hi = realHosts.indexOf(hostOf(u)); if(hi>=0) linkHtml = '<a class="fc-src" href="'+esc(realUrls[hi])+'" target="_blank" rel="noopener">see source ↗</a>'; }
+      }
+      const label = st==='verified' ? 'verified vs. record' : st==='unreachable' ? 'record likely exists — unreachable' : 'reported, unconfirmed';
+      h += '<div class="factcheck '+st+'">'+
+             '<div class="fc-top"><span class="fc-status '+st+'">'+label+'</span>'+linkHtml+'</div>'+
+             '<div class="fc-claim">'+esc(f.claim)+'</div>'+
+             (f.note?'<div class="fc-note">'+esc(f.note)+'</div>':'')+
+           '</div>';
+    });
+  }
+
   if(Array.isArray(d.lenses)&&d.lenses.length){
     h += '<div class="section-label"><span>Four-lens reading</span><span>'+d.lenses.length+' applied</span></div>';
     d.lenses.forEach(l=>{
@@ -996,6 +1033,7 @@ function resultToText(){
   if(d.summary) L.push('\n'+d.summary);
   if(d.whyNow) L.push('\nWHY NOW: '+d.whyNow);
   if(d.caveat) L.push('\nKEY UNCERTAINTY: '+d.caveat);
+  if(Array.isArray(d.factChecks)&&d.factChecks.length){ L.push('\nCHECKED CLAIMS'); d.factChecks.forEach(f=>L.push('• ['+(f.status||'reported')+'] '+(f.claim||'')+(f.source?(' — '+f.source):'')+(f.note?(' ('+f.note+')'):''))); }
   if(Array.isArray(d.lenses)&&d.lenses.length){ L.push('\nFOUR-LENS READING');
     d.lenses.forEach(l=>L.push('• ['+(l.code||'')+' · '+(l.confidence||'')+'] '+(l.name||'')+': '+(l.reading||''))); }
   const pv=d.perspectives||{};
