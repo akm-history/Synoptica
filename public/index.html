@@ -30,9 +30,10 @@
   .suggest{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap;}
   .suggest label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);}
   .suggest select{padding:7px 10px;border:1px solid var(--rule);background:var(--paper);font-family:'Inter',sans-serif;font-size:13px;color:var(--ink);}
-  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
-  .chip{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 11px;border:1px solid var(--rule);background:var(--paper);cursor:pointer;color:var(--gray);}
-  .chip:hover{border-color:var(--ink);color:var(--ink);}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px;}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-family:'Inter',sans-serif;font-size:13px;padding:7px 13px;border:1px solid var(--rule);border-radius:2px;background:var(--paper);cursor:pointer;color:var(--ink);text-align:left;line-height:1.2;}
+  .chip:hover{border-color:var(--ink);background:var(--paper-dim);}
+  .chip-ico{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--friction);font-weight:600;}
 
   /* mode toggle */
   .mode-row{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap;}
@@ -45,12 +46,13 @@
 
   /* discovery */
   .discover{margin-top:20px;border-top:1px solid var(--rule);padding-top:14px;}
-  .disc-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:space-between;}
-  .disc-title{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--friction);font-weight:600;}
-  .cat-tabs{display:flex;gap:4px;flex-wrap:wrap;}
-  .cat-tab{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:4px 9px;border:1px solid var(--rule);background:var(--paper);cursor:pointer;color:var(--gray);}
-  .cat-tab:hover{border-color:var(--ink);color:var(--ink);}
-  .cat-tab.active{background:var(--paper-dim);border-color:var(--ink);color:var(--ink);}
+  .disc-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .disc-lead{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray);font-weight:600;white-space:nowrap;}
+  .disc-sub{font-family:'Inter',sans-serif;font-size:12px;color:var(--gray);margin-top:12px;font-style:italic;}
+  .cat-tabs{display:flex;gap:2px;flex-wrap:wrap;}
+  .cat-tab{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 10px;border:none;border-bottom:2px solid transparent;background:none;cursor:pointer;color:var(--gray);}
+  .cat-tab:hover{color:var(--ink);}
+  .cat-tab.active{color:var(--ink);border-bottom-color:var(--friction);font-weight:600;}
 
   /* results toolbar */
   .restools{display:flex;gap:8px;margin:0 0 6px;flex-wrap:wrap;}
@@ -220,14 +222,15 @@
         <button class="seg" data-mode="quick" onclick="setMode('quick')">⚡ Quick read</button>
         <button class="seg active" data-mode="deep" onclick="setMode('deep')">⌖ Deep dive</button>
       </div>
-      <span class="mode-hint" id="modeHint">Full multi-angle analysis · 20–60s</span>
+      <span class="mode-hint" id="modeHint">Full multi-angle analysis · 60-120s</span>
     </div>
 
     <div class="discover">
-      <div class="disc-head">
-        <span class="disc-title" id="discTitle">Trending now</span>
+      <div class="disc-row">
+        <span class="disc-lead">Browse by topic</span>
         <div class="cat-tabs" id="catTabs"></div>
       </div>
+      <div class="disc-sub" id="discSub">Tap one to run a deep-dive — or type your own above</div>
       <div class="chips" id="chips"></div>
     </div>
   </div>
@@ -390,7 +393,7 @@ function setMode(m){
   document.getElementById('go').textContent = (m==='quick'?'Quick read →':'Deep dive →');
   document.getElementById('modeHint').textContent = (m==='quick'
     ? 'Faster, lighter — summary + key lenses · ~10–20s'
-    : 'Full multi-angle analysis · 20–60s');
+    : 'Full multi-angle analysis · 60-120s');
 }
 
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
@@ -403,26 +406,20 @@ function renderCatTabs(){
 }
 function pickCat(c){
   activeCat = c;
-  document.getElementById('discTitle').textContent = c;
   renderCatTabs();
   renderChips();
 }
 // The "Trending now" list is replaced by a daily set from /api/trending when
 // available. Until that loads (or if it fails, e.g. in a no-backend preview),
 // we fall back to the built-in pool below so the UI is never empty.
-let dailyTrending = null;        // filled by loadTrending()
+let dailyCategories = null;        // {catName: [phrases]} — filled by loadTrending()
 
 function renderChips(){
-  let items;
-  if(activeCat==='Trending now'){
-    items = dailyTrending && dailyTrending.length
-      ? dailyTrending                       // daily list: same for everyone, no per-load shuffle
-      : shuffle(CATEGORIES['Trending now']).slice(0,5);  // fallback before/without backend
-  } else {
-    items = CATEGORIES[activeCat]||[];
-  }
+  let items = (dailyCategories && Array.isArray(dailyCategories[activeCat]) && dailyCategories[activeCat].length)
+    ? dailyCategories[activeCat]               // daily set: same for everyone, no per-load shuffle
+    : (CATEGORIES[activeCat] || []);           // fallback before/without backend
   document.getElementById('chips').innerHTML = items.map(t=>
-    '<span class="chip" onclick="fillChip(this)">'+esc(t)+'</span>'
+    '<button class="chip" onclick="fillChip(this)"><span class="chip-ico">⌕</span>'+esc(t)+'</button>'
   ).join('');
 }
 async function loadTrending(){
@@ -430,13 +427,16 @@ async function loadTrending(){
     const r = await fetch('/api/trending');
     if(!r.ok) return;
     const data = await r.json();
-    if(Array.isArray(data.topics) && data.topics.length){
-      dailyTrending = data.topics.slice(0,8);
-      if(activeCat==='Trending now') renderChips();   // swap in once loaded
+    if(data.categories && typeof data.categories==='object'){
+      dailyCategories = data.categories;       // full daily set for every category
+      renderChips();                           // swap in once loaded
+    } else if(Array.isArray(data.topics) && data.topics.length){
+      dailyCategories = { 'Trending now': data.topics };   // backward-compat
+      if(activeCat==='Trending now') renderChips();
     }
   }catch(e){ /* keep the static fallback */ }
 }
-function fillChip(el){ document.getElementById('q').value=el.textContent; runSearch(); }
+function fillChip(el){ document.getElementById('q').value=el.textContent.replace(/^⌕\s*/,''); runSearch(); }
 
 async function runSearch(){
   const q = document.getElementById('q').value.trim();
