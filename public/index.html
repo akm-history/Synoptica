@@ -67,6 +67,7 @@
   .loadwrap svg{width:200px;height:150px;display:block;margin:0 auto 18px;}
   .loadcap{font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.04em;color:var(--gray);}
   .loadcap b{color:var(--ink);font-weight:600;}
+  .loadmeta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gray);margin-top:8px;text-align:center;}
   .loadcap .dots::after{content:'';animation:dots 1.4s steps(4,end) infinite;}
   @keyframes dots{0%{content:''}25%{content:'·'}50%{content:'··'}75%{content:'···'}100%{content:''}}
   .err{border-left:3px solid var(--friction);background:#fbeae6;padding:14px 16px;font-size:14px;margin:24px 0;}
@@ -389,12 +390,34 @@ function pickCat(c){
   renderCatTabs();
   renderChips();
 }
+// The "Trending now" list is replaced by a daily set from /api/trending when
+// available. Until that loads (or if it fails, e.g. in a no-backend preview),
+// we fall back to the built-in pool below so the UI is never empty.
+let dailyTrending = null;        // filled by loadTrending()
+
 function renderChips(){
-  let items = CATEGORIES[activeCat]||[];
-  if(activeCat==='Trending now') items = shuffle(items).slice(0,5);   // shuffle the trending pool
+  let items;
+  if(activeCat==='Trending now'){
+    items = dailyTrending && dailyTrending.length
+      ? dailyTrending                       // daily list: same for everyone, no per-load shuffle
+      : shuffle(CATEGORIES['Trending now']).slice(0,5);  // fallback before/without backend
+  } else {
+    items = CATEGORIES[activeCat]||[];
+  }
   document.getElementById('chips').innerHTML = items.map(t=>
     '<span class="chip" onclick="fillChip(this)">'+esc(t)+'</span>'
   ).join('');
+}
+async function loadTrending(){
+  try{
+    const r = await fetch('/api/trending');
+    if(!r.ok) return;
+    const data = await r.json();
+    if(Array.isArray(data.topics) && data.topics.length){
+      dailyTrending = data.topics.slice(0,8);
+      if(activeCat==='Trending now') renderChips();   // swap in once loaded
+    }
+  }catch(e){ /* keep the static fallback */ }
 }
 function fillChip(el){ document.getElementById('q').value=el.textContent; runSearch(); }
 
@@ -427,10 +450,7 @@ async function runSearch(){
     return;
   }
 
-  const caption = MODE==='quick'
-    ? '<b>Quick read</b> — pulling key sources — ~10–20s'
-    : '<b>Searching several angles</b> — event · counter-case · money trail · global coverage — 20–60s';
-  out.innerHTML = loadingHTML(caption);
+  startLoading(MODE);
 
   try{
     // Attempt 1: grounded with web search (multi-angle in deep mode)
@@ -445,18 +465,20 @@ async function runSearch(){
     let grounded = true;
     if(!parsed){
       grounded = false;
-      out.innerHTML = loadingHTML('<b>Refining</b> — re-running for a clean result');
+      startLoading(MODE, {refining:true});
       const r2 = await callClaude(q, false, MODE);
       lastText = r2.text; links = r2.links;
       parsed = extractJSON(lastText);
     }
 
+    stopLoading();
     if(parsed){
       render(parsed, q, grounded, links, MODE);
       if(CONFIG.caching) _cache.set(key, {parsed, grounded, links, at:Date.now()});
     }
     else renderRaw(lastText);
   }catch(e){
+    stopLoading();
     const msg = String(e.message||e);
     const friendly = /rate|429/i.test(msg) ? 'The service is busy right now.'
                    : /network|fetch|load/i.test(msg) ? 'A network hiccup interrupted the request.'
@@ -594,37 +616,116 @@ function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;',
 // Animated SVG node-graph loader: a central event node, links drawing out to
 // satellite (lens/source) nodes, plus a slow radar sweep. Pure SMIL — loops on
 // its own, no JS frame loop, no backend needed.
-function loadingHTML(caption){
-  const sats = [ [40,38],[164,46],[36,112],[150,116],[100,28] ];
+function loadingSVG(){
+  // Four satellites carry the four lenses; the 5th (top) stays a neutral node.
+  // Glyphs are tiny monochrome symbols centered on each point, pulsing with the link.
+  const sats = [
+    { p:[40,38],  g:'geo'  },   // geopolitical — globe
+    { p:[164,46], g:'fin'  },   // financial — $
+    { p:[36,112], g:'mil'  },   // military — fighter-jet outline
+    { p:[150,116],g:'tech' },   // technological — chip
+    { p:[100,28], g:'node' }    // neutral connecting node
+  ];
+  // glyph path-builders, drawn around center (cx,cy), small scale
+  function glyph(g, cx, cy){
+    const s = 'stroke="var(--ink)" fill="none" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"';
+    if(g==='geo'){ // globe: circle + meridians
+      return '<circle cx="'+cx+'" cy="'+cy+'" r="5.5" '+s+'/>'+
+             '<ellipse cx="'+cx+'" cy="'+cy+'" rx="2.4" ry="5.5" '+s+'/>'+
+             '<line x1="'+(cx-5.5)+'" y1="'+cy+'" x2="'+(cx+5.5)+'" y2="'+cy+'" '+s+'/>';
+    }
+    if(g==='fin'){ // dollar sign
+      return '<text x="'+cx+'" y="'+(cy+4.3)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="13" font-weight="600" fill="var(--ink)">$</text>';
+    }
+    if(g==='mil'){ // fighter-jet outline (top-down delta), nose up
+      const pts=[[cx,cy-6],[cx+1.6,cy-1],[cx+6,cy+2],[cx+1.6,cy+2],[cx+1,cy+5],[cx,cy+4],[cx-1,cy+5],[cx-1.6,cy+2],[cx-6,cy+2],[cx-1.6,cy-1]].map(p=>p.join(',')).join(' ');
+      return '<polygon points="'+pts+'" '+s+'/>';
+    }
+    if(g==='tech'){ // microchip: square + pins
+      let pins='';
+      [-3,0,3].forEach(o=>{ pins+=
+        '<line x1="'+(cx+o)+'" y1="'+(cy-7)+'" x2="'+(cx+o)+'" y2="'+(cy-5)+'" '+s+'/>'+
+        '<line x1="'+(cx+o)+'" y1="'+(cy+5)+'" x2="'+(cx+o)+'" y2="'+(cy+7)+'" '+s+'/>'+
+        '<line x1="'+(cx-7)+'" y1="'+(cy+o)+'" x2="'+(cx-5)+'" y2="'+(cy+o)+'" '+s+'/>'+
+        '<line x1="'+(cx+5)+'" y1="'+(cy+o)+'" x2="'+(cx+7)+'" y2="'+(cy+o)+'" '+s+'/>'; });
+      return '<rect x="'+(cx-5)+'" y="'+(cy-5)+'" width="10" height="10" rx="1.5" '+s+'/>'+
+             '<rect x="'+(cx-2)+'" y="'+(cy-2)+'" width="4" height="4" rx="0.5" '+s+'/>'+pins;
+    }
+    // neutral node
+    return '<circle cx="'+cx+'" cy="'+cy+'" r="4" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5"/>';
+  }
+
   let links='', nodes='';
-  sats.forEach((s,i)=>{
+  sats.forEach((sat,i)=>{
+    const [x,y]=sat.p;
     const delay=(i*0.45).toFixed(2);
-    links += '<line x1="100" y1="75" x2="'+s[0]+'" y2="'+s[1]+'" stroke="var(--rule)" stroke-width="1" '+
+    links += '<line x1="100" y1="75" x2="'+x+'" y2="'+y+'" stroke="var(--rule)" stroke-width="1" '+
              'stroke-dasharray="120" stroke-dashoffset="120">'+
              '<animate attributeName="stroke-dashoffset" values="120;0;0;120" keyTimes="0;0.35;0.7;1" dur="2.8s" begin="'+delay+'s" repeatCount="indefinite"/>'+
              '<animate attributeName="stroke" values="var(--rule);var(--cooperation);var(--rule)" dur="2.8s" begin="'+delay+'s" repeatCount="indefinite"/></line>';
-    nodes += '<circle cx="'+s[0]+'" cy="'+s[1]+'" r="4" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5">'+
-             '<animate attributeName="r" values="3;5;3" dur="2.8s" begin="'+delay+'s" repeatCount="indefinite"/>'+
-             '<animate attributeName="opacity" values="0.35;1;0.35" dur="2.8s" begin="'+delay+'s" repeatCount="indefinite"/></circle>';
+    // each glyph sits in a group that pulses opacity/scale in time with its link
+    nodes += '<g opacity="0.4">'+
+               '<animate attributeName="opacity" values="0.4;1;0.4" dur="2.8s" begin="'+delay+'s" repeatCount="indefinite"/>'+
+               glyph(sat.g, x, y)+
+             '</g>';
   });
-  const svg =
-    '<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">'+
-      // radar sweep ring
+  return '<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">'+
       '<circle cx="100" cy="75" r="60" fill="none" stroke="var(--rule)" stroke-width="0.75" stroke-dasharray="2 5" opacity="0.6">'+
         '<animateTransform attributeName="transform" type="rotate" from="0 100 75" to="360 100 75" dur="9s" repeatCount="indefinite"/></circle>'+
-      // sweep line
       '<line x1="100" y1="75" x2="100" y2="15" stroke="var(--friction)" stroke-width="1" opacity="0.5">'+
         '<animateTransform attributeName="transform" type="rotate" from="0 100 75" to="360 100 75" dur="3.5s" repeatCount="indefinite"/></line>'+
       links + nodes +
-      // central event node
       '<circle cx="100" cy="75" r="7" fill="var(--friction)">'+
         '<animate attributeName="r" values="7;9;7" dur="1.6s" repeatCount="indefinite"/></circle>'+
       '<circle cx="100" cy="75" r="7" fill="none" stroke="var(--friction)" stroke-width="1.5">'+
         '<animate attributeName="r" values="7;18" dur="2s" repeatCount="indefinite"/>'+
         '<animate attributeName="opacity" values="0.6;0" dur="2s" repeatCount="indefinite"/></circle>'+
     '</svg>';
-  return '<div class="loadwrap">'+svg+'<div class="loadcap">'+caption+'<span class="dots"></span></div></div>';
 }
+
+// Simple one-line loader (used for cached/instant states)
+function loadingHTML(caption){
+  return '<div class="loadwrap">'+loadingSVG()+'<div class="loadcap">'+caption+'<span class="dots"></span></div></div>';
+}
+
+// Animated, TIMED loader for real searches: cycles step messages, shows a live
+// elapsed counter (honest proof it's working), and escalates past 60s so a long
+// wait never reads as "frozen".
+const LOAD_STEPS = {
+  deep: ["Searching the core event…","Pulling the opposing case…","Following the money trail…","Scanning non-Western coverage…","Cross-referencing sources…","Weighing the four lenses…","Mapping the timeline…","Assembling the deep-dive…"],
+  quick: ["Searching key sources…","Reading the main angles…","Assembling the quick read…"],
+  refining: ["Re-running for a clean result…","Tidying the output…"]
+};
+let _loadTimer = null, _loadStart = 0;
+
+function startLoading(mode, opts){
+  opts = opts || {};
+  const steps = opts.refining ? LOAD_STEPS.refining : (LOAD_STEPS[mode] || LOAD_STEPS.deep);
+  const out = document.getElementById('out');
+  out.innerHTML = '<div class="loadwrap">'+loadingSVG()+
+    '<div class="loadcap"><span id="loadStep"></span><span class="dots"></span></div>'+
+    '<div class="loadmeta" id="loadMeta"></div></div>';
+  _loadStart = Date.now();
+  stopLoading._clear();
+  const tick = ()=>{
+    const step = document.getElementById('loadStep');
+    const meta = document.getElementById('loadMeta');
+    if(!step || !meta){ stopLoading(); return; }   // DOM replaced by result/error
+    const secs = Math.floor((Date.now()-_loadStart)/1000);
+    let msg;
+    if(secs < steps.length*4)      msg = steps[Math.floor(secs/4)];
+    else if(secs < 60)             msg = "Synthesizing the analysis…";
+    else if(secs < 100)            msg = "Taking a little longer than usual — still working…";
+    else if(secs < 150)            msg = "Still going — this is a heavy one, hang tight…";
+    else                           msg = "Almost there — big analyses can take a couple of minutes…";
+    step.innerHTML = '<b>'+msg+'</b>';
+    meta.textContent = secs + 's elapsed' + (secs < 60 && !opts.refining ? ' · usually 20–60s' : '');
+  };
+  tick();
+  _loadTimer = setInterval(tick, 1000);
+}
+function stopLoading(){ if(_loadTimer){ clearInterval(_loadTimer); _loadTimer=null; } }
+stopLoading._clear = function(){ if(_loadTimer){ clearInterval(_loadTimer); _loadTimer=null; } };
 
 // Robust extractor: handles code fences, surrounding prose, citation/footnote
 // markers injected by web search, and trailing commas. Tries several strategies.
@@ -744,6 +845,7 @@ function braceMatch(s){
 function deTrailingComma(s){ return s.replace(/,(\s*[}\]])/g,'$1'); }
 
 function renderRaw(text){
+  if(typeof stopLoading==='function') stopLoading();
   document.getElementById('out').innerHTML =
     '<div class="res-kicker">Raw analysis</div>'+
     '<p style="font-size:13px;color:var(--gray)">(Couldn\'t parse the structured format even after repair — showing raw output. This usually means the model\'s reply was malformed; try again.)</p>'+
@@ -751,6 +853,7 @@ function renderRaw(text){
 }
 
 function render(d, q, grounded, links, mode){
+  if(typeof stopLoading==='function') stopLoading();
   const out = document.getElementById('out');
   links = links || [];
   const genAt = new Date();
@@ -877,6 +980,7 @@ function fmtStamp(d){
   catch(e){ return d.toISOString(); }
 }
 function newSearch(){
+  if(typeof stopLoading==='function') stopLoading();
   document.getElementById('out').innerHTML='';
   const q=document.getElementById('q'); q.value=''; q.focus();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -935,6 +1039,7 @@ function toggleHow(){
 }
 renderCatTabs();
 renderChips();
+loadTrending();   // fetch today's trending list from the backend (falls back to static pool)
 document.getElementById('q').addEventListener('keydown',e=>{ if(e.key==='Enter') runSearch(); });
 
 // Shared link: ?q=...&mode=... auto-runs the same search for the recipient.
