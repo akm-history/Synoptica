@@ -736,7 +736,7 @@ function startLoading(mode, opts){
     else if(secs < 150)            msg = "Still going — this is a heavy one, hang tight…";
     else                           msg = "Almost there — big analyses can take a couple of minutes…";
     step.innerHTML = '<b>'+msg+'</b>';
-    meta.textContent = secs + 's elapsed' + (secs < 60 && !opts.refining ? ' · usually 20–60s' : '');
+    meta.textContent = secs + 's elapsed' + (secs < 60 && !opts.refining ? ' · usually 60-120s' : '');
   };
   tick();
   _loadTimer = setInterval(tick, 1000);
