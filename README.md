@@ -8,6 +8,8 @@ This repo is a complete, deployable app:
 - **`api/analyze.js`** — the backend. A serverless function that holds your
   Anthropic API key, calls Claude, and protects your spend. **This is the only
   place your key lives — it never reaches the browser.**
+- **`api/trending.js`** — generates the daily "Trending now" suggestion list
+  (once per day, cached).
 
 ---
 
@@ -76,18 +78,47 @@ work without the backend running (that's expected; it needs the key).
 
 ---
 
-## Going bigger (durable cache + rate limiting)
+## Daily trending suggestions
 
-The in-memory cache/limiter reset when the serverless function goes cold. For
-real traffic, add a free **Upstash Redis** database:
+The chips under the search bar ("Trending now") are refreshed **once per day** by
+`api/trending.js`, which asks Claude (with web search) for the day's most
+significant events and caches that list. Everyone who visits that day gets the
+same list, and clicking a chip runs a normal search — cached, so the first click
+generates the deep-dive and everyone after gets that same version for free.
 
-1. Create one at [upstash.com](https://upstash.com) → copy its **REST URL** and
-   **REST token**.
-2. Add two env vars in Vercel:
+- The trending **list** and each topic's **analysis** are cached separately, so
+  the daily refresh never collides with the analysis cache.
+- Categories (Conflict, Trade, etc.) are static and don't change.
+- Cost: ~one cheap search per day for the list, plus the normal per-topic cost
+  on first click.
+
+> Without Upstash (below), the daily list still refreshes but is generated
+> per serverless instance, so different visitors may occasionally see slightly
+> different sets. Add Upstash to make the daily list **identical for everyone**.
+
+---
+
+## Going bigger (durable cache, rate limiting & consistent trending)
+
+The in-memory cache/limiter/trending-list reset when the serverless function
+goes cold, and aren't shared across instances. For real traffic — and for a
+trending list that's identical for every visitor — add a free **Upstash Redis**
+database (this is the single upgrade that makes caching, rate-limiting, AND daily
+trending all durable):
+
+1. Create a database at [upstash.com](https://upstash.com) (free tier is plenty)
+   → open it → copy its **REST URL** and **REST token**.
+2. In Vercel → **Settings → Environment Variables**, add:
    - `UPSTASH_REDIS_REST_URL`
    - `UPSTASH_REDIS_REST_TOKEN`
-3. Redeploy. Caching and rate-limiting are now durable across all instances.
-   No code change.
+3. **Redeploy.** No code change. Now:
+   - Cached analyses are shared across all visitors and survive cold starts.
+   - Rate limits are enforced per visitor across all instances.
+   - The daily trending list is generated once and identical for everyone.
+
+> Tip: for day-long consistency of a topic's analysis, you can raise
+> `CACHE_TTL_SECS` (e.g. `86400` for 24h). Longer = more consistent and cheaper,
+> but results stay fixed longer for fast-moving events. Default is 6h.
 
 ---
 
@@ -105,7 +136,8 @@ real traffic, add a free **Upstash Redis** database:
 
 - Server-side JSON schema validation + auto-retry (kills malformed-output errors).
 - Permanent share links (store a result under an ID).
-- Live trending (pull a real news/markets feed).
+- Pre-warmed trending (generate the day's topic analyses up front so chips are
+  instant — costs a few deep-dives/day whether or not anyone clicks).
 - Streaming responses, sign-in, search history.
 
 These build on top of this Phase 1 foundation.
